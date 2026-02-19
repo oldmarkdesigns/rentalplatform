@@ -268,33 +268,20 @@ function LandingPage({ user, onOpenAuthOverlay }) {
           </nav>
 
           <div className="flex items-center justify-self-end gap-2">
-            {user ? (
-              <>
-                <button
-                  type="button"
-                  className="rounded-xl border border-black/15 bg-white px-3 py-2 text-xs font-semibold text-ink-700 hover:bg-[#f7f9fc]"
-                  onClick={() => openAuth("login")}
-                >
-                  Logga in
-                </button>
-                <button
-                  type="button"
-                  className="rounded-xl border border-[#0f1930] bg-[#0f1930] px-3 py-2 text-xs font-semibold text-white hover:bg-[#16233f]"
-                  onClick={() => openAuth("signup", "renter")}
-                >
-                  Skapa konto
-                </button>
-              </>
-            ) : (
-              <button
-                type="button"
-                className="inline-flex items-center gap-1 rounded-xl border border-black/15 bg-white px-3 py-2 text-xs font-semibold text-ink-700 hover:bg-[#f7f9fc]"
-                onClick={() => navigateTo("/app/rent")}
-              >
-                <SearchIcon className="h-3.5 w-3.5" />
-                Sök som gäst
-              </button>
-            )}
+            <button
+              type="button"
+              className="rounded-xl border border-black/15 bg-white px-3 py-2 text-xs font-semibold text-ink-700 hover:bg-[#f7f9fc]"
+              onClick={() => openAuth("login")}
+            >
+              Logga in
+            </button>
+            <button
+              type="button"
+              className="rounded-xl border border-[#0f1930] bg-[#0f1930] px-3 py-2 text-xs font-semibold text-white hover:bg-[#16233f]"
+              onClick={() => openAuth("signup", "renter")}
+            >
+              Skapa konto
+            </button>
           </div>
         </div>
       </header>

@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import AiSearchPanelV2 from "../../components/app/AiSearchPanelV2";
 import ListingVisualCard from "../../components/app/ListingVisualCard";
 import ViewingRequestModal from "../../components/app/ViewingRequestModal";
 import {
@@ -16,9 +15,7 @@ import {
   WifiIcon
 } from "../../components/icons/UiIcons";
 import { districtOptions, listingTypes } from "../../data/mockData";
-import { formatSek } from "../../lib/formatters";
 import { navigateTo } from "../../lib/router";
-import stockholmMidhero from "../../../Assets/Hero Images/stockholm-midhero.jpg";
 
 const districtMapLayout = {
   Solna: { x: 42, y: 18 },
@@ -403,8 +400,6 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
   } = app;
 
   const [filters, setFilters] = useState(savedFilters);
-  const [showAiPanel, setShowAiPanel] = useState(false);
-  const [hasSearched, setHasSearched] = useState(() => hasRunSearchInUrl());
   const [isHydratingLandingSearch, setIsHydratingLandingSearch] = useState(() => hasRunSearchInUrl());
   const [showSearchEditor, setShowSearchEditor] = useState(false);
   const [showAdvancedSearchEditor, setShowAdvancedSearchEditor] = useState(false);
@@ -448,17 +443,6 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
   useEffect(() => {
     setFilters(savedFilters);
   }, [savedFilters]);
-
-  function toggleType(type) {
-    setFilters((prev) => {
-      const current = Array.isArray(prev.type) ? prev.type : [];
-      const exists = current.includes(type);
-      return {
-        ...prev,
-        type: exists ? current.filter((item) => item !== type) : [...current, type]
-      };
-    });
-  }
 
   function isAmenitySelected(value) {
     const query = String(amenityQuery || "").toLowerCase();
@@ -510,29 +494,12 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
     await executeSearch(filters, { amenityQuery: amenityTerms, furnishedFilter });
   }
 
-  function applyAreaPerPersonEstimate() {
-    const teamSize = Number(filters.teamSize || 0);
-    if (teamSize <= 0) {
-      app.pushToast("Fyll i teamstorlek först för att beräkna yta.", "info");
-      return;
-    }
-
-    const minSize = Math.max(20, Math.round(teamSize * 8));
-    const maxSize = Math.max(minSize + 20, Math.round(teamSize * 15));
-    setFilters((prev) => ({
-      ...prev,
-      minSize: String(minSize),
-      maxSize: String(maxSize)
-    }));
-  }
-
   function openAuthPrompt(mode) {
     setAuthPromptMode(mode);
   }
 
   async function executeSearch(nextFilters = filters, options = {}) {
     await searchListings(nextFilters);
-    setHasSearched(true);
     setIsHydratingLandingSearch(false);
     setShowSearchEditor(false);
     setUseNewSearchCta(Boolean(options.markAsNewSearch));
@@ -558,7 +525,6 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
     setFilters(resetFilters);
     setAmenityQuery("");
     setFurnishedFilter("all");
-    setShowAiPanel(false);
     await executeSearch(resetFilters, {
       amenityQuery: "",
       furnishedFilter: "all",
@@ -687,104 +653,8 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
 
   return (
     <section className="relative h-full overflow-y-auto p-4 sm:p-6">
-      {!hasSearched ? <img src={stockholmMidhero} alt="Stockholm stadsvy" className="pointer-events-none absolute inset-0 h-full w-full object-cover opacity-25" /> : null}
-      {!hasSearched ? <div className="pointer-events-none absolute inset-0 bg-[#f6f8fb]/88" /> : null}
       <div className="relative mx-auto w-full max-w-[1240px]">
-        {!hasSearched ? (
-          <div className="grid min-h-[70vh] place-items-center">
-            <div className="w-full max-w-5xl rounded-3xl border border-[#c8d1de] bg-gradient-to-br from-[#edf2f7] via-[#eaf0f7] to-[#f3f6fb] p-5 sm:p-7">
-              <div className="mb-3 flex items-center justify-between gap-2">
-                <h1 className="text-3xl font-semibold">Sök lokal</h1>
-                <div className="inline-flex items-center gap-2">
-                  <SparklesIcon className="h-3.5 w-3.5 text-ink-700" />
-                  <span className="text-[11px] font-semibold text-ink-700">AI Sök</span>
-                  <PillToggle checked={showAiPanel} onToggle={() => setShowAiPanel((value) => !value)} ariaLabel="AI Sök" className="h-6 w-10" />
-                </div>
-              </div>
-              <p className="mb-4 text-sm text-ink-600">Fyll i sökrutan och justera filtren direkt här.</p>
-
-              {!showAiPanel ? (
-                <div className="space-y-3">
-                  <div className="relative">
-                    <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-400" />
-                    <input className="field pl-9" value={filters.query} onChange={(event) => setFilters((prev) => ({ ...prev, query: event.target.value }))} placeholder="Exempel: kontor i Södermalm för 12 personer" />
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    <button type="button" className="rounded-xl border border-[#0f1930] bg-[#0f1930] px-4 py-2 text-xs font-semibold text-white hover:bg-[#16233f]" onClick={() => executeSearch(filters)}>
-                      Visa träffar
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <AiSearchPanelV2
-                  filters={filters}
-                  onApplyFilters={setFilters}
-                  onRunSearch={runAiSearch}
-                  listingsById={listingsById}
-                  defaultFilters={app.defaultFilters}
-                  onSaveSearch={saveAiSearch}
-                  onSuggestedFilters={handleAiSuggestedFilters}
-                />
-              )}
-
-              {!showAiPanel ? (
-                <div className="mt-4 grid gap-3 md:grid-cols-2">
-                  <select className="field" value={filters.district} onChange={(event) => setFilters((prev) => ({ ...prev, district: event.target.value }))}>
-                    <option value="Alla">Alla områden</option>
-                    {districtOptions.map((district) => <option key={district} value={district}>{district}</option>)}
-                  </select>
-                  <div className="rounded-2xl border border-black/10 bg-white p-2.5">
-                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink-500">Typ av lokaler</p>
-                    <div className="flex flex-wrap gap-2">
-                      {listingTypes.map((type) => {
-                        const active = Array.isArray(filters.type) && filters.type.includes(type);
-                        return (
-                          <label key={type} className={`inline-flex items-center gap-2 rounded-xl border px-2.5 py-1.5 text-xs font-semibold ${active ? "border-[#0f1930] bg-[#0f1930] text-white" : "border-black/15 bg-white text-ink-700"}`}>
-                            <input type="checkbox" checked={active} onChange={() => toggleType(type)} />
-                            {type}
-                          </label>
-                        );
-                      })}
-                    </div>
-                  </div>
-                  <input className="field" type="number" min="1" value={filters.teamSize} onChange={(event) => setFilters((prev) => ({ ...prev, teamSize: event.target.value }))} placeholder="Minsta platser" />
-                  <input className="field" value={amenityQuery} onChange={(event) => setAmenityQuery(event.target.value)} placeholder="Bekvämligheter (fiber, parkering...)" />
-                  <select className="field" value={furnishedFilter} onChange={(event) => setFurnishedFilter(event.target.value)}>
-                    <option value="all">Möblering: Alla</option>
-                    <option value="yes">Endast möblerad</option>
-                    <option value="no">Endast omöblerad</option>
-                  </select>
-                  <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
-                    <input className="field" type="number" min="0" value={filters.minSize} onChange={(event) => setFilters((prev) => ({ ...prev, minSize: event.target.value }))} placeholder="Min kvm" />
-                    <span className="text-xs text-ink-500">-</span>
-                    <input className="field" type="number" min="0" value={filters.maxSize} onChange={(event) => setFilters((prev) => ({ ...prev, maxSize: event.target.value }))} placeholder="Max kvm" />
-                  </div>
-                  <div className="md:col-span-2 rounded-2xl border border-black/10 bg-white/80 p-3">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-xs font-semibold text-ink-600">Budget / månad</span>
-                      <span className="rounded-xl border border-black/10 bg-[#f7f9fc] px-2.5 py-1 text-xs font-semibold text-ink-700">{formatSek(filters.maxBudget)}</span>
-                    </div>
-                    <input className="mt-2 w-full accent-[#0f1930]" type="range" min="25000" max="250000" step="5000" value={filters.maxBudget} onChange={(event) => setFilters((prev) => ({ ...prev, maxBudget: event.target.value }))} />
-                  </div>
-                  <div className="md:col-span-2 flex flex-wrap gap-2">
-                    <button type="button" className="inline-flex items-center justify-center gap-1.5 rounded-2xl border border-black/20 bg-white px-4 py-2.5 text-sm font-semibold" onClick={() => { setFilters(app.defaultFilters); setAmenityQuery(""); setFurnishedFilter("all"); }}>
-                      <ResetIcon className="h-4 w-4" />Nollställ
-                    </button>
-                    <button type="button" className="inline-flex items-center justify-center gap-1.5 rounded-2xl border border-black/20 bg-white px-4 py-2.5 text-sm font-semibold" onClick={applyAreaPerPersonEstimate}>
-                      Beräkna yta
-                    </button>
-                    <button type="button" className="inline-flex items-center justify-center gap-1.5 rounded-2xl border border-[#0f1930] bg-[#0f1930] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#16233f]" onClick={() => saveCurrentFilters(filters)}>
-                      <SaveIcon className="h-4 w-4" />Spara filter
-                    </button>
-                    <button type="button" className="inline-flex items-center justify-center gap-1.5 rounded-2xl border border-[#0f1930] bg-[#0f1930] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#16233f]" onClick={() => executeSearch(filters)}>
-                      Visa träffar
-                    </button>
-                  </div>
-                </div>
-              ) : null}
-            </div>
-          </div>
-        ) : isHydratingLandingSearch ? (
+        {isHydratingLandingSearch ? (
           <div className="grid min-h-[58vh] place-items-center">
             <div className="rounded-2xl border border-[#c8d1de] bg-white px-5 py-4 text-sm font-semibold text-ink-700">
               Laddar sökresultat...
