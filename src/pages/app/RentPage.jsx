@@ -51,6 +51,14 @@ const furnishedOptions = [
   { value: "yes", label: "Möblerad" },
   { value: "no", label: "Omöblerad" }
 ];
+const amenityAliasesByValue = {
+  "cykelförråd": ["cykelförråd", "cykelrum"],
+  garage: ["garage", "parkering"],
+  kök: ["kök", "kitchen"],
+  mötesrum: ["mötesrum", "konferensrum"],
+  fiber: ["fiber", "wifi"],
+  reception: ["reception"]
+};
 
 const heroInputClass = "w-full rounded-2xl border border-black/15 bg-[#f7f9fc] px-3 py-3 text-sm text-ink-900 placeholder:text-ink-500 focus:border-[#0f1930] focus:outline-none";
 const heroSelectClass = "w-full rounded-2xl border border-black/15 bg-[#f7f9fc] px-3 py-3 pr-10 text-sm text-ink-900 appearance-none focus:border-[#0f1930] focus:outline-none [background-image:url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2214%22 height=%2214%22 viewBox=%220 0 20 20%22 fill=%22none%22%3E%3Cpath d=%22M6 8L10 12L14 8%22 stroke=%22%23263842%22 stroke-width=%221.8%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22/%3E%3C/svg%3E')] [background-repeat:no-repeat] [background-position:right_0.7rem_center] [background-size:14px_14px]";
@@ -404,6 +412,7 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
   const [showSearchEditor, setShowSearchEditor] = useState(false);
   const [showAdvancedSearchEditor, setShowAdvancedSearchEditor] = useState(false);
   const [showEditorAiPanel, setShowEditorAiPanel] = useState(false);
+  const [editorModeOpacity, setEditorModeOpacity] = useState(1);
   const [editorAiPrompt, setEditorAiPrompt] = useState("");
   const [amenityQuery, setAmenityQuery] = useState("");
   const [furnishedFilter, setFurnishedFilter] = useState("all");
@@ -419,6 +428,7 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
   const [sortBy, setSortBy] = useState("relevance");
   const [useNewSearchCta, setUseNewSearchCta] = useState(false);
   const landingSearchAppliedRef = useRef(false);
+  const editorModeTimerRef = useRef(null);
 
   const favoriteIds = useMemo(() => new Set(favorites.map((entry) => entry.listingId)), [favorites]);
   const listingsById = useMemo(() => new Map(listings.map((item) => [item.id, item])), [listings]);
@@ -444,18 +454,18 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
     setFilters(savedFilters);
   }, [savedFilters]);
 
+  useEffect(() => {
+    return () => {
+      if (editorModeTimerRef.current) {
+        clearTimeout(editorModeTimerRef.current);
+      }
+    };
+  }, []);
+
   function isAmenitySelected(value) {
     const query = String(amenityQuery || "").toLowerCase();
     const normalizedValue = String(value || "").toLowerCase();
-    const aliasesByValue = {
-      "cykelförråd": ["cykelförråd", "cykelrum"],
-      garage: ["garage", "parkering"],
-      kök: ["kök", "kitchen"],
-      mötesrum: ["mötesrum", "konferensrum"],
-      fiber: ["fiber", "wifi"],
-      reception: ["reception"]
-    };
-    const aliases = aliasesByValue[normalizedValue] || [normalizedValue];
+    const aliases = amenityAliasesByValue[normalizedValue] || [normalizedValue];
     return aliases.some((alias) => query.includes(alias));
   }
 
@@ -468,6 +478,33 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
     const hasValue = tokens.some((token) => token.toLowerCase() === lowered);
     const nextTokens = hasValue ? tokens.filter((token) => token.toLowerCase() !== lowered) : [...tokens, value];
     setAmenityQuery(nextTokens.join(" "));
+  }
+
+  function switchEditorSearchMode(nextAiEnabled) {
+    if (nextAiEnabled === showEditorAiPanel) return;
+    if (editorModeTimerRef.current) {
+      clearTimeout(editorModeTimerRef.current);
+    }
+    setEditorModeOpacity(0);
+    editorModeTimerRef.current = setTimeout(() => {
+      setShowEditorAiPanel(nextAiEnabled);
+      setShowAdvancedSearchEditor(true);
+      setEditorModeOpacity(1);
+      editorModeTimerRef.current = null;
+    }, 140);
+  }
+
+  function inferAmenitiesFromText(text) {
+    const normalized = String(text || "").toLowerCase();
+    const inferred = [];
+    for (const option of editorAmenityOptions) {
+      const normalizedValue = String(option.value).toLowerCase();
+      const aliases = amenityAliasesByValue[normalizedValue] || [normalizedValue];
+      if (aliases.some((alias) => normalized.includes(alias))) {
+        inferred.push(option.value);
+      }
+    }
+    return inferred;
   }
 
   async function submitEditorSearch(event) {
@@ -483,8 +520,17 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
       try {
         const aiResponse = await runAiSearch(prompt, filters);
         const nextFilters = aiResponse?.suggestedFilters || filters;
+        const inferredAmenities = inferAmenitiesFromText(prompt);
+        const currentAmenities = amenityTerms
+          .split(/\s+/)
+          .map((token) => token.trim())
+          .filter(Boolean);
+        const nextAmenityTerms = Array.from(new Set([...currentAmenities, ...inferredAmenities])).join(" ");
+        if (nextAmenityTerms !== amenityTerms) {
+          setAmenityQuery(nextAmenityTerms);
+        }
         setFilters(nextFilters);
-        await executeSearch(nextFilters, { aiPrompt: prompt, amenityQuery: amenityTerms, furnishedFilter });
+        await executeSearch(nextFilters, { aiPrompt: prompt, amenityQuery: nextAmenityTerms, furnishedFilter });
       } catch (_error) {
         app.pushToast("AI-sök kunde inte köras just nu.", "error");
       }
@@ -548,6 +594,7 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
     const minSizeFromUrl = String(params.get("minSize") || "").trim();
     const teamSizeFromUrl = String(params.get("teamSize") || "").trim();
     const maxBudgetFromUrl = String(params.get("maxBudget") || "").trim();
+    const maxSizeFromUrl = String(params.get("maxSize") || "").trim();
     const amenityFromUrl = String(params.get("amenity") || "").trim();
     const furnishedFromUrl = String(params.get("furnished") || "").trim();
     const aiEnabledFromUrl = params.get("ai") === "1";
@@ -558,6 +605,7 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
       district: districtFromUrl || filters.district,
       type: typeFromUrl ? [typeFromUrl] : filters.type,
       minSize: minSizeFromUrl || filters.minSize,
+      maxSize: maxSizeFromUrl || filters.maxSize,
       teamSize: teamSizeFromUrl || filters.teamSize,
       maxBudget: maxBudgetFromUrl || filters.maxBudget
     };
@@ -568,6 +616,7 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
       try {
         let filtersToApply = nextFilters;
         let aiPromptApplied = "";
+        let nextAmenityQuery = amenityFromUrl;
 
         if (aiEnabledFromUrl && aiPromptFromUrl) {
           try {
@@ -575,15 +624,24 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
             if (aiResponse?.suggestedFilters) {
               filtersToApply = aiResponse.suggestedFilters;
             }
+            const inferredAmenities = inferAmenitiesFromText(aiPromptFromUrl);
+            if (inferredAmenities.length > 0) {
+              const explicitAmenities = nextAmenityQuery
+                .split(/\s+/)
+                .map((token) => token.trim())
+                .filter(Boolean);
+              nextAmenityQuery = Array.from(new Set([...explicitAmenities, ...inferredAmenities])).join(" ");
+            }
             aiPromptApplied = aiPromptFromUrl;
           } catch (_error) {
             app.pushToast("AI-sök kunde inte tolkas. Visar resultat med dina vanliga filter.", "info");
           }
         }
 
+        setAmenityQuery(nextAmenityQuery);
         setFilters(filtersToApply);
         await executeSearch(filtersToApply, {
-          amenityQuery: amenityFromUrl || amenityQuery,
+          amenityQuery: nextAmenityQuery,
           furnishedFilter: furnishedFromUrl === "yes" || furnishedFromUrl === "no" ? furnishedFromUrl : furnishedFilter,
           aiPrompt: aiPromptApplied
         });
@@ -697,6 +755,11 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
                       setShowSearchEditor((value) => {
                         const nextValue = !value;
                         if (nextValue) {
+                          if (editorModeTimerRef.current) {
+                            clearTimeout(editorModeTimerRef.current);
+                            editorModeTimerRef.current = null;
+                          }
+                          setEditorModeOpacity(1);
                           setShowAdvancedSearchEditor(true);
                           setShowEditorAiPanel(false);
                           setAmenityQuery(appliedSearchMeta.amenityQuery || amenityQuery);
@@ -718,7 +781,7 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
             </div>
 
             {showSearchEditor ? (
-              <article className="rounded-3xl border border-black/10 bg-white p-5 text-ink-900 shadow-[0_20px_60px_rgba(15,25,48,0.12)] sm:p-6">
+              <article className="mx-auto w-full rounded-3xl border border-black/10 bg-white p-5 text-ink-900 shadow-[0_20px_60px_rgba(15,25,48,0.12)] sm:p-6">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <h2 className="text-xl font-semibold text-ink-900 sm:text-2xl">Sök lokaler i hela Stockholm</h2>
                   <div className="inline-flex items-center gap-2 text-xs font-semibold text-ink-700">
@@ -726,10 +789,7 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
                     <span>AI-sök</span>
                     <PillToggle
                       checked={showEditorAiPanel}
-                      onToggle={() => {
-                        setShowEditorAiPanel((value) => !value);
-                        setShowAdvancedSearchEditor(true);
-                      }}
+                      onToggle={() => switchEditorSearchMode(!showEditorAiPanel)}
                       ariaLabel="AI-sök i ändra sökning"
                       className="h-6 w-10"
                     />
@@ -737,6 +797,7 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
                 </div>
 
                 <form className="mt-6 space-y-6" onSubmit={submitEditorSearch}>
+                  <div className="transition-opacity duration-200" style={{ opacity: editorModeOpacity }}>
                   {showEditorAiPanel ? (
                     <div className="space-y-4 rounded-2xl border border-black/10 bg-[#f8fafc] p-5">
                       <div className="inline-flex items-center gap-2">
@@ -762,7 +823,7 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
                   ) : (
                     <>
                       <div className="space-y-5">
-                        <div className="grid gap-5 sm:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
+                        <div className="grid gap-5 sm:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_minmax(0,0.55fr)]">
                           <label>
                             <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-ink-700">Sök</span>
                             <div className="relative">
@@ -786,8 +847,6 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
                               {districtOptions.map((district) => <option key={district} value={district} className="text-black">{district}</option>)}
                             </select>
                           </label>
-                        </div>
-                        <div className="grid gap-5 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] sm:items-start">
                           <label>
                             <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-ink-700">Typ</span>
                             <select
@@ -802,42 +861,39 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
                               {listingTypes.map((type) => <option key={type} value={type} className="text-black">{type}</option>)}
                             </select>
                           </label>
+                        </div>
+                        <div className="grid gap-5 sm:grid-cols-3 sm:items-start">
                           <label>
-                            <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-ink-700">Nyckelord</span>
+                            <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-ink-700">Team</span>
                             <input
-                              value={amenityQuery}
-                              onChange={(event) => setAmenityQuery(event.target.value)}
+                              value={filters.teamSize}
+                              onChange={(event) => setFilters((prev) => ({ ...prev, teamSize: event.target.value }))}
                               className={heroInputClass}
-                              placeholder="ex. reception, lounge, parkering"
+                              placeholder="Platser"
+                              type="number"
+                              min="1"
                             />
+                          </label>
+                          <label>
+                            <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-ink-700">Min yta</span>
+                            <input value={filters.minSize} onChange={(event) => setFilters((prev) => ({ ...prev, minSize: event.target.value }))} className={heroInputClass} placeholder="Min kvm" type="number" min="0" />
+                          </label>
+                          <label>
+                            <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-ink-700">Max yta</span>
+                            <input value={filters.maxSize} onChange={(event) => setFilters((prev) => ({ ...prev, maxSize: event.target.value }))} className={heroInputClass} placeholder="Max kvm" type="number" min="0" />
                           </label>
                         </div>
                       </div>
 
                       <div
                         className={`grid overflow-hidden transition-[grid-template-rows,opacity,margin] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${
-                          showAdvancedSearchEditor ? "mt-1 opacity-100" : "opacity-0"
+                          showAdvancedSearchEditor ? "mt-5 opacity-100" : "mt-0 opacity-0"
                         }`}
                         style={{ gridTemplateRows: showAdvancedSearchEditor ? "1fr" : "0fr" }}
                       >
-                        <div className="min-h-0 space-y-5 pt-2.5">
-                          <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
-                            <label>
-                              <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-ink-700">Nyckelord</span>
-                              <input value={amenityQuery} onChange={(event) => setAmenityQuery(event.target.value)} className={heroInputClass} placeholder="ex. reception, lounge, parkering" />
-                            </label>
-                            <label>
-                              <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-ink-700">Min yta</span>
-                              <input value={filters.minSize} onChange={(event) => setFilters((prev) => ({ ...prev, minSize: event.target.value }))} className={heroInputClass} placeholder="Min kvm" type="number" min="0" />
-                            </label>
-                            <label>
-                              <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-ink-700">Team</span>
-                              <input value={filters.teamSize} onChange={(event) => setFilters((prev) => ({ ...prev, teamSize: event.target.value }))} className={heroInputClass} placeholder="Platser" type="number" min="1" />
-                            </label>
-                          </div>
-
-                          <div className="grid gap-5 sm:grid-cols-[minmax(0,320px)_minmax(0,1fr)] sm:items-start">
-                            <div className="w-full">
+                        <div className="min-h-0 space-y-5">
+                          <div className="grid gap-5 sm:grid-cols-3 sm:items-start">
+                            <div>
                               <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-ink-700">Möblering</span>
                               <div className="inline-flex h-[48px] w-full items-center gap-1 rounded-2xl border border-black/15 bg-[#f1f4f8] p-1">
                                 {furnishedOptions.map((option) => {
@@ -858,31 +914,28 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
                               </div>
                             </div>
 
-                            <div>
-                              <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-ink-700">Budget / månad</span>
-                              <div className="grid gap-5 sm:grid-cols-2">
-                                <label>
-                                  <input
-                                    value={String(filters.minBudget ?? "")}
-                                    onChange={(event) => setFilters((prev) => ({ ...prev, minBudget: event.target.value }))}
-                                    className={`${heroInputClass} h-[48px] py-0`}
-                                    placeholder="Min (ex. 25 000)"
-                                    type="number"
-                                    min="0"
-                                  />
-                                </label>
-                                <label>
-                                  <input
-                                    value={filters.maxBudget}
-                                    onChange={(event) => setFilters((prev) => ({ ...prev, maxBudget: event.target.value }))}
-                                    className={`${heroInputClass} h-[48px] py-0`}
-                                    placeholder="Max (ex. 250 000)"
-                                    type="number"
-                                    min="0"
-                                  />
-                                </label>
-                              </div>
-                            </div>
+                            <label>
+                              <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-ink-700">Budget min / månad</span>
+                              <input
+                                value={String(filters.minBudget ?? "")}
+                                onChange={(event) => setFilters((prev) => ({ ...prev, minBudget: event.target.value }))}
+                                className={`${heroInputClass} h-[48px] py-0`}
+                                placeholder="Min (ex. 25 000)"
+                                type="number"
+                                min="0"
+                              />
+                            </label>
+                            <label>
+                              <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-ink-700">Budget max / månad</span>
+                              <input
+                                value={String(filters.maxBudget ?? "").trim() === "250000" ? "" : filters.maxBudget}
+                                onChange={(event) => setFilters((prev) => ({ ...prev, maxBudget: event.target.value }))}
+                                className={`${heroInputClass} h-[48px] py-0`}
+                                placeholder="Max (ex. 250000)"
+                                type="number"
+                                min="0"
+                              />
+                            </label>
                           </div>
 
                           <div>
@@ -910,7 +963,7 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
                         </div>
                       </div>
 
-                      <div className="mt-4 flex items-center justify-end gap-2">
+                      <div className="mt-5 flex items-center justify-end gap-2">
                         <button
                           type="button"
                           className="rounded-2xl border border-black/15 bg-white px-4 py-3 text-sm font-semibold text-ink-700 hover:bg-[#eef3fa]"
@@ -924,6 +977,7 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
                       </div>
                     </>
                   )}
+                  </div>
                 </form>
               </article>
             ) : null}

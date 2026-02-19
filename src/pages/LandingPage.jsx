@@ -168,6 +168,7 @@ function LandingPage({ user, onOpenAuthOverlay }) {
     district: "Alla",
     type: "Alla",
     minSize: "",
+    maxSize: "",
     teamSize: "",
     minBudget: "",
     maxBudget: "",
@@ -215,7 +216,7 @@ function LandingPage({ user, onOpenAuthOverlay }) {
   function submitHeroSearch(event) {
     event.preventDefault();
     const params = new URLSearchParams();
-    const amenityTerms = [heroFilters.keyword.trim(), ...heroFilters.amenities].filter(Boolean).join(" ");
+    const amenityTerms = [...heroFilters.amenities].filter(Boolean).join(" ");
     const aiPromptCandidate = heroAiPrompt.trim() || heroFilters.query.trim();
 
     params.set("run", "1");
@@ -223,6 +224,7 @@ function LandingPage({ user, onOpenAuthOverlay }) {
     if (heroFilters.district !== "Alla") params.set("district", heroFilters.district);
     if (heroFilters.type !== "Alla") params.set("type", heroFilters.type);
     if (heroFilters.minSize.trim()) params.set("minSize", heroFilters.minSize.trim());
+    if (heroFilters.maxSize.trim()) params.set("maxSize", heroFilters.maxSize.trim());
     if (heroFilters.teamSize.trim()) params.set("teamSize", heroFilters.teamSize.trim());
     if (heroFilters.minBudget.trim()) params.set("minBudget", heroFilters.minBudget.trim());
     if (heroFilters.maxBudget.trim()) params.set("maxBudget", heroFilters.maxBudget.trim());
@@ -403,10 +405,10 @@ function LandingPage({ user, onOpenAuthOverlay }) {
                                 </select>
                               </label>
                             </div>
-                            <div className="grid gap-5 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-start">
-                              <label>
-                                <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-ink-700">Typ</span>
-                                <select
+                          <div className="grid gap-5 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-start">
+                            <label>
+                              <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-ink-700">Typ</span>
+                              <select
                                   value={heroFilters.type}
                                   onChange={(event) => setHeroFilters((prev) => ({ ...prev, type: event.target.value }))}
                                   className={heroSelectClass}
@@ -414,16 +416,29 @@ function LandingPage({ user, onOpenAuthOverlay }) {
                                   <option value="Alla" className="text-black">Alla typer</option>
                                   {listingTypes.map((type) => <option key={type} value={type} className="text-black">{type}</option>)}
                                 </select>
-                              </label>
-                              <label>
-                                <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-ink-700">Nyckelord</span>
-                                <input
-                                  value={heroFilters.keyword}
-                                  onChange={(event) => setHeroFilters((prev) => ({ ...prev, keyword: event.target.value }))}
-                                  className={heroInputClass}
-                                  placeholder="ex. reception, lounge, parkering"
-                                />
-                              </label>
+                            </label>
+                            <label>
+                              <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-ink-700">Team</span>
+                              <input
+                                value={heroFilters.teamSize}
+                                onChange={(event) => setHeroFilters((prev) => ({ ...prev, teamSize: event.target.value }))}
+                                className={heroInputClass}
+                                placeholder="Platser"
+                                type="number"
+                                min="1"
+                              />
+                            </label>
+                            <label>
+                              <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-ink-700">Min yta</span>
+                              <input
+                                value={heroFilters.minSize}
+                                onChange={(event) => setHeroFilters((prev) => ({ ...prev, minSize: event.target.value }))}
+                                className={heroInputClass}
+                                placeholder="Min kvm"
+                                type="number"
+                                min="0"
+                              />
+                            </label>
                               <button type="submit" className="rounded-2xl border border-[#0f1930] bg-[#0f1930] px-5 py-3 text-sm font-semibold text-white hover:bg-[#16233f] sm:self-end">
                                 Sök lokal
                               </button>
@@ -439,14 +454,16 @@ function LandingPage({ user, onOpenAuthOverlay }) {
                         style={{ gridTemplateRows: showAdvancedHeroFilters ? "1fr" : "0fr" }}
                       >
                         <div className="min-h-0 space-y-5 pt-2.5">
-                          <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+                          <div className="grid gap-5 sm:grid-cols-3">
                             <label>
-                              <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-ink-700">Nyckelord</span>
+                              <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-ink-700">Team</span>
                               <input
-                                value={heroFilters.keyword}
-                                onChange={(event) => setHeroFilters((prev) => ({ ...prev, keyword: event.target.value }))}
+                                value={heroFilters.teamSize}
+                                onChange={(event) => setHeroFilters((prev) => ({ ...prev, teamSize: event.target.value }))}
                                 className={heroInputClass}
-                                placeholder="ex. reception, lounge, parkering"
+                                placeholder="Platser"
+                                type="number"
+                                min="1"
                               />
                             </label>
                             <label>
@@ -461,14 +478,14 @@ function LandingPage({ user, onOpenAuthOverlay }) {
                               />
                             </label>
                             <label>
-                              <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-ink-700">Team</span>
+                              <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-ink-700">Max yta</span>
                               <input
-                                value={heroFilters.teamSize}
-                                onChange={(event) => setHeroFilters((prev) => ({ ...prev, teamSize: event.target.value }))}
+                                value={heroFilters.maxSize}
+                                onChange={(event) => setHeroFilters((prev) => ({ ...prev, maxSize: event.target.value }))}
                                 className={heroInputClass}
-                                placeholder="Platser"
+                                placeholder="Max kvm"
                                 type="number"
-                                min="1"
+                                min="0"
                               />
                             </label>
                           </div>
