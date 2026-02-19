@@ -1,0 +1,28 @@
+<svg width="1600" height="960" viewBox="0 0 1600 960" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#203a5c"/>
+      <stop offset="60%" stop-color="#304f75"/>
+      <stop offset="100%" stop-color="#0f223a"/>
+    </linearGradient>
+    <linearGradient id="glass" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#ffd38f" stop-opacity="0.95"/>
+      <stop offset="100%" stop-color="#ff9d42" stop-opacity="0.78"/>
+    </linearGradient>
+  </defs>
+  <rect width="1600" height="960" fill="url(#bg)"/>
+  <circle cx="1160" cy="150" r="280" fill="#6b8db6" fill-opacity="0.18"/>
+  <circle cx="280" cy="120" r="200" fill="#93b1cf" fill-opacity="0.12"/>
+  <polygon points="220,690 1050,430 1420,470 600,730" fill="#0f1f34" fill-opacity="0.9"/>
+  <polygon points="390,650 980,468 1240,496 650,680" fill="#1d3150"/>
+  <polygon points="650,680 1240,496 1240,660 650,814" fill="#0f2136"/>
+  <polygon points="440,632 940,482 1145,504 645,650" fill="url(#glass)"/>
+  <polygon points="645,650 1145,504 1145,586 645,726" fill="#ffb45e" fill-opacity="0.82"/>
+  <polygon points="220,690 600,730 600,820 220,780" fill="#13263f"/>
+  <polygon points="220,780 600,820 1260,670 1260,740" fill="#0b1a2f"/>
+  <rect x="645" y="510" width="6" height="196" fill="#ffe7c1" fill-opacity="0.55"/>
+  <rect x="725" y="488" width="6" height="210" fill="#ffe7c1" fill-opacity="0.55"/>
+  <rect x="805" y="468" width="6" height="220" fill="#ffe7c1" fill-opacity="0.55"/>
+  <rect x="885" y="450" width="6" height="228" fill="#ffe7c1" fill-opacity="0.55"/>
+  <rect x="965" y="482" width="6" height="188" fill="#ffe7c1" fill-opacity="0.55"/>
+</svg>

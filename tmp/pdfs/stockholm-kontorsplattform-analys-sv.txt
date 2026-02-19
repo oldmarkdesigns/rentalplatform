@@ -1,0 +1,73 @@
+Stockholmsläge (per 11 februari 2026)
+
+Stockholm ser ut som en tvådelad marknad just nu: stark efterfrågan i centrala premiumlägen och svagare efterfrågan i decentraliserade lägen.
+
+1. Cushman & Wakefield (Q4 2025) rapporterar att vakansgraden för kontor i Stockholm är 18,5 % totalt, men endast 7,5 % i CBD och 23,0 % i decentraliserade områden.
+2. Citymark (5 november 2025) rapporterar att vakansgraden i centrala Stockholm (innanför tullarna) minskade från 10,7 % till 10,3 %, medan förortslägen ligger betydligt högre.
+3. Flexibla arbetsplatsytor växer fortsatt strukturellt, men med pressade marginaler och konsolidering (enligt yta:s marknadskommentarer från 2024).
+
+Konkurrens i Stockholm just nu
+
+Ni går in i en konkurrensutsatt marknad, men det finns fortfarande tydlig "whitespace" om ni undviker att bli "bara en till annonsplats".
+
+1. Marknadsplatser och förmedlare för flexibla kontor
+- yta.se: uppger sig vara Sveriges största marknadsplats och rådgivningstjänst för kontor/coworking, med 10 000+ kontor som uppdateras dagligen.
+- Workaround: visar 666 coworkingalternativ i Stockholm, 184 lägen och 83 hyresvärdar (egna siffror uppdaterade 11 februari 2026).
+
+2. Breda kommersiella annonsplattformar
+- Objektvision: uppger sig vara Sveriges största marknadsplats för kommersiella lokaler; visar 21 231 objekt totalt och 2 732 i Stockholm, samt 55 000+ besökare per vecka (egna siffror).
+- Detta är er närmsta konkurrens för en modell som omfattar "alla icke-bostäder".
+
+3. Operatörsdrivna ekosystem (kan kringgå marknadsplatser)
+- Regus/IWG: 51 center i Sverige och stor närvaro i Stockholm.
+- Convendum: flera lägen i Stockholm, fortsatt aktivt efter omstrukturering.
+- United Spaces: 4 anläggningar i Stockholm.
+- 7A: 4 centrala adresser i Stockholm.
+- A house, The Park med flera: nischad positionering kring community/ekosystem.
+
+Var marknaden fortfarande är svag (slutsatser)
+
+Följande är sannolikt de starkaste säljpunkterna för er plattform:
+
+1. Verifierad datakvalitet: många annonser är inaktuella eller ofullständiga. "Verifierad tillgänglighet + verifierad prisbild" är en stark kil.
+2. Transparent total kostnad: hyresgäster kan ofta inte jämföra äpplen med äpplen (hyra, serviceavgifter, deposition, anpassning/fit-out, avtalsvillkor).
+3. Enhetlighet över flera lokaltyper: verktyg för kontor/coworking är relativt mogna, men blandade kommersiella kategorier (studio, retail, lager, klinik, lätt industri) är fortfarande fragmenterade.
+4. Högre deal-hastighet: det finns fortfarande friktion från första kontakt till visning till erbjudande. Ni kan vinna på svarstids-SLA:er och strukturerat workflow.
+5. Hyresgäst-först och neutral ranking: många plattformar upplevs som utbudsstyrda. En tillitsdriven produkt med objektiv matchning/rankning kan differentiera.
+
+Plan för prototyp + beta (affär + produkt)
+
+Kör i två steg:
+
+1. Etapp 1: Prototyp (4-6 veckor)
+- Affär: välj en tydlig startkil (t.ex. SMB-kontor + kreativ studio, eller SMB-kontor + lätt retail) och ett initialt geografiskt fokus (t.ex. innerstan + Solna).
+- Affär: rekrytera 20-30 utbudspartners manuellt.
+- Produkt: klickbar prototyp + concierge-backend (manuell matchning är helt okej i detta steg).
+- Produkt: endast kärnflöden: sök/filter, objektsida, förfrågan om tillgänglighet, bokning av visning, shortlist med jämförelse.
+- Validerings-KPI:er: förfrågningsgrad per annons, svarstid, visningskonvertering.
+
+2. Etapp 2: Privat beta (8-12 veckor)
+- Affär: expandera till 75-150 aktiva hyresvärdar/operatörer och 500-1 500 liveannonser.
+- Affär: testa monetisering (leadavgift, success fee eller abonnemang för premiumexponering/CRM-verktyg).
+- Produkt: hyresvärdsportal, verifieringsbadge för annonser, standardiserad prismodell, CRM-pipeline, analysdashboard.
+- Produkt: tillitslager (bolagsverifiering, moderering, anti-spam, bedrägeriskydd).
+- Produkt: enkel rekommendationsmotor (budget, pendling, teamstorlek, avtalsflexibilitet).
+- Beta-KPI:er: tid till första kvalificerade lead, lead-till-visning, visning-till-offert och retention på båda sidor.
+
+Viktig regulatorisk notering (Sverige)
+
+Om ni verkar som förmedlare/mäklare (inte enbart annonsplats) kan registreringskrav bli aktuella. FMI anger ett undantag för lokalförmedling när månadshyran alltid är under 10 000 EUR; över den nivån kan registreringsskyldighet gälla. Sätt affärsmodell och juridisk genomgång tidigt.
+
+Källor
+
+- Cushman & Wakefield Sweden MarketBeat (Q4 2025): https://www.cushmanwakefield.com/en/sweden/insights/sweden-marketbeat
+- Citymark: Vakansuppgången bromsar in på Stockholms kontorsmarknad (5 nov 2025): https://citymark.today/vakansuppgangen-bromsar-in-pa-stockholms-kontorsmarknad/
+- yta.se (startsida): https://yta.se/
+- yta.se: Inside Sweden's Coworking Boom - 2024 Market Report: https://yta.se/blogg/inside-swedens-coworking-boom-2024-market-report-and-the-broader-office-landscape/
+- Workaround Stockholm coworking: https://workaround.io/se/en/rent/coworking-spaces/stockholm
+- Objektvision (startsida): https://objektvision.se/
+- Regus Sweden: https://www.regus.com/en/se
+- United Spaces Stockholm: https://unitedspaces.com/en/location/stockholm
+- Convendum: https://convendum.se/en/
+- 7A: https://www.7a.se/
+- FMI FAQ (lokalförmedling och registrering): https://fmi.se/fragor-och-svar/registrering-av-foretag/maste-aven-lokalformedlare-och-lokalformedlingsforetag-vara-registrerade-hos-fmi/

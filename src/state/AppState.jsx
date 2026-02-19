@@ -1,0 +1,577 @@
+import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { aiApi, authApi, favoriteApi, leadsApi, listingApi, profileApi, viewingsApi } from "../api";
+import { analyticsEventNames, trackEvent } from "../lib/analytics";
+
+const AppStateContext = createContext(null);
+
+const defaultFilters = {
+  county: "Stockholms län",
+  query: "",
+  district: "Alla",
+  type: [],
+  minSize: "",
+  maxSize: "",
+  maxBudget: 250000,
+  teamSize: "",
+  requirePrice: false,
+  onlyBostadsratt: false,
+  daysOnMarket: "all",
+  keyword: "",
+  advertiser: "Alla",
+  verified: false,
+  readyNow: false
+};
+
+function savedFilterKey(userId) {
+  return `office_rental_saved_filters_${userId}`;
+}
+
+function savedFilterPresetsKey(userId) {
+  return `office_rental_saved_filter_presets_${userId}`;
+}
+
+function savedAiSearchesKey(userId) {
+  return `office_rental_saved_ai_searches_${userId}`;
+}
+
+function readSavedFilters(userId) {
+  if (!userId) {
+    return defaultFilters;
+  }
+
+  const raw = window.localStorage.getItem(savedFilterKey(userId));
+  if (!raw) {
+    return defaultFilters;
+  }
+
+  try {
+    return normalizeFilters({
+      ...defaultFilters,
+      ...JSON.parse(raw)
+    });
+  } catch (_error) {
+    return defaultFilters;
+  }
+}
+
+function persistSavedFilters(userId, filters) {
+  if (!userId) {
+    return;
+  }
+
+  window.localStorage.setItem(savedFilterKey(userId), JSON.stringify(filters));
+}
+
+function readSavedFilterPresets(userId) {
+  if (!userId) {
+    return [];
+  }
+
+  const raw = window.localStorage.getItem(savedFilterPresetsKey(userId));
+  if (!raw) {
+    return [];
+  }
+
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (_error) {
+    return [];
+  }
+}
+
+function persistSavedFilterPresets(userId, presets) {
+  if (!userId) {
+    return;
+  }
+
+  window.localStorage.setItem(savedFilterPresetsKey(userId), JSON.stringify(presets));
+}
+
+function readSavedAiSearches(userId) {
+  if (!userId) {
+    return [];
+  }
+
+  const raw = window.localStorage.getItem(savedAiSearchesKey(userId));
+  if (!raw) {
+    return [];
+  }
+
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (_error) {
+    return [];
+  }
+}
+
+function persistSavedAiSearches(userId, searches) {
+  if (!userId) {
+    return;
+  }
+
+  window.localStorage.setItem(savedAiSearchesKey(userId), JSON.stringify(searches));
+}
+
+function normalizeFilters(filters) {
+  const rawType = filters?.type;
+  const normalizedType = Array.isArray(rawType)
+    ? rawType.filter(Boolean)
+    : (typeof rawType === "string" && rawType !== "Alla" ? rawType.split(",").map((item) => item.trim()).filter(Boolean) : []);
+
+  return {
+    ...defaultFilters,
+    ...filters,
+    type: normalizedType,
+    verified: Boolean(filters?.verified),
+    readyNow: Boolean(filters?.readyNow),
+    requirePrice: Boolean(filters?.requirePrice),
+    onlyBostadsratt: Boolean(filters?.onlyBostadsratt)
+  };
+}
+
+function filterPresetLabel(filters) {
+  const district = filters.district && filters.district !== "Alla" ? filters.district : "Alla områden";
+  const selectedTypes = Array.isArray(filters.type) ? filters.type : [];
+  const type = selectedTypes.length > 0 ? `${selectedTypes.length} typer` : "Alla typer";
+  const budget = Number(filters.maxBudget || defaultFilters.maxBudget).toLocaleString("sv-SE");
+  return `${district} · ${type} · ${budget} kr`;
+}
+
+export function AppProvider({ children }) {
+  const [isBootstrapping, setIsBootstrapping] = useState(true);
+  const [user, setUser] = useState(null);
+  const [listings, setListings] = useState([]);
+  const [favorites, setFavorites] = useState([]);
+  const [viewings, setViewings] = useState([]);
+  const [leads, setLeads] = useState([]);
+  const [savedFilters, setSavedFiltersState] = useState(defaultFilters);
+  const [filterPresets, setFilterPresets] = useState([]);
+  const [savedAiSearches, setSavedAiSearches] = useState([]);
+  const [aiHistory, setAiHistory] = useState([]);
+  const [toasts, setToasts] = useState([]);
+
+  function pushToast(message, type = "info") {
+    const id = crypto.randomUUID();
+    setToasts((current) => [...current, { id, message, type }]);
+    window.setTimeout(() => {
+      setToasts((current) => current.filter((item) => item.id !== id));
+    }, 3000);
+  }
+
+  async function refreshCoreData(activeUser = user) {
+    if (!activeUser) {
+      setListings([]);
+      setFavorites([]);
+      setViewings([]);
+      setLeads([]);
+      return;
+    }
+
+    const [{ listings: listingsData }, { favorites: favoriteData }, { viewings: viewingData }] = await Promise.all([
+      listingApi.getListings({
+        county: "Stockholms län",
+        query: "",
+        district: "Alla",
+        type: [],
+        minSize: "",
+        maxSize: "",
+        maxBudget: 500000,
+        teamSize: "",
+        requirePrice: false,
+        onlyBostadsratt: false,
+        daysOnMarket: "all",
+        keyword: "",
+        advertiser: "Alla",
+        verified: false,
+        readyNow: false
+      }),
+      favoriteApi.getFavorites(),
+      viewingsApi.getViewings()
+    ]);
+
+    setListings(listingsData);
+    setFavorites(favoriteData);
+    setViewings(viewingData);
+
+    if (activeUser.role === "publisher") {
+      const { leads: leadData } = await leadsApi.getLeads();
+      setLeads(leadData);
+    } else {
+      setLeads([]);
+    }
+  }
+
+  async function bootstrapSession() {
+    try {
+      const { user: sessionUser } = await authApi.session();
+      setUser(sessionUser);
+      if (sessionUser) {
+        setSavedFiltersState(readSavedFilters(sessionUser.id));
+        setFilterPresets(readSavedFilterPresets(sessionUser.id));
+        setSavedAiSearches(readSavedAiSearches(sessionUser.id));
+        await refreshCoreData(sessionUser);
+      }
+    } catch (_error) {
+      setUser(null);
+      setSavedFiltersState(defaultFilters);
+      setFilterPresets([]);
+      setSavedAiSearches([]);
+    } finally {
+      setIsBootstrapping(false);
+    }
+  }
+
+  useEffect(() => {
+    bootstrapSession();
+  }, []);
+
+  async function signup(payload) {
+    const response = await authApi.signup(payload);
+    setUser(response.user);
+    setSavedFiltersState(readSavedFilters(response.user.id));
+    setFilterPresets(readSavedFilterPresets(response.user.id));
+    setSavedAiSearches(readSavedAiSearches(response.user.id));
+    await trackEvent(analyticsEventNames.SIGNUP_COMPLETED, {
+      role: payload.role
+    });
+    pushToast("Konto skapat. Fortsätt med onboarding.", "success");
+    return response.user;
+  }
+
+  async function login(payload) {
+    const response = await authApi.login(payload);
+    setUser(response.user);
+    setSavedFiltersState(readSavedFilters(response.user.id));
+    setFilterPresets(readSavedFilterPresets(response.user.id));
+    setSavedAiSearches(readSavedAiSearches(response.user.id));
+    await refreshCoreData(response.user);
+    await trackEvent(analyticsEventNames.LOGIN_COMPLETED, {
+      role: response.user.role
+    });
+    pushToast("Inloggning lyckades.", "success");
+    return response.user;
+  }
+
+  async function logout() {
+    try {
+      await authApi.logout();
+    } catch (_error) {
+      // Always clear local session state even if mock logout request fails.
+    } finally {
+      setUser(null);
+      setListings([]);
+      setFavorites([]);
+      setViewings([]);
+      setLeads([]);
+      setSavedFiltersState(defaultFilters);
+      setFilterPresets([]);
+      setSavedAiSearches([]);
+      setAiHistory([]);
+      pushToast("Du är utloggad.", "info");
+    }
+  }
+
+  async function completeOnboarding(payload) {
+    const { user: nextUser } = await profileApi.completeOnboarding(payload);
+    setUser(nextUser);
+    setSavedFiltersState(readSavedFilters(nextUser.id));
+    setFilterPresets(readSavedFilterPresets(nextUser.id));
+    setSavedAiSearches(readSavedAiSearches(nextUser.id));
+    await refreshCoreData(nextUser);
+    await trackEvent(analyticsEventNames.ONBOARDING_COMPLETED, {
+      role: payload.primaryRole
+    });
+    pushToast("Onboarding slutförd.", "success");
+    return nextUser;
+  }
+
+  async function switchRole(role) {
+    if (!user) {
+      return null;
+    }
+
+    try {
+      const currentRoles = Array.isArray(user.roles) ? user.roles : [user.role || "renter"];
+      const roles = currentRoles.includes(role) ? currentRoles : [...currentRoles, role];
+      const { user: nextUser } = await profileApi.updateMe({
+        role,
+        roles
+      });
+
+      setUser(nextUser);
+      setSavedFiltersState(readSavedFilters(nextUser.id));
+      setFilterPresets(readSavedFilterPresets(nextUser.id));
+      setSavedAiSearches(readSavedAiSearches(nextUser.id));
+
+      try {
+        await refreshCoreData(nextUser);
+      } catch (_error) {
+        // Keep role switch successful even if secondary data refresh fails.
+      }
+
+      pushToast(`Du bytte till ${role === "publisher" ? "annonsörsläge" : "hyresgästläge"}.`, "info");
+      return nextUser;
+    } catch (error) {
+      pushToast(error.message || "Kunde inte byta roll just nu.", "error");
+      return user;
+    }
+  }
+
+  async function searchListings(filters) {
+    const normalized = normalizeFilters(filters);
+
+    setSavedFiltersState(normalized);
+    if (user?.id) {
+      persistSavedFilters(user.id, normalized);
+    }
+
+    const { listings: listingData } = await listingApi.getListings(normalized);
+    setListings(listingData);
+    return listingData;
+  }
+
+  async function saveCurrentFilters(filtersOverride = savedFilters) {
+    if (!user) return;
+    const normalized = normalizeFilters(filtersOverride);
+    persistSavedFilters(user.id, normalized);
+    setSavedFiltersState(normalized);
+
+    setFilterPresets((previous) => {
+      const duplicate = previous.find((item) => JSON.stringify(item.filters) === JSON.stringify(normalized));
+      const nextItem = duplicate || {
+        id: crypto.randomUUID(),
+        title: filterPresetLabel(normalized),
+        createdAt: new Date().toISOString()
+      };
+
+      const next = [
+        {
+          ...nextItem,
+          filters: normalized,
+          updatedAt: new Date().toISOString()
+        },
+        ...previous.filter((item) => item.id !== nextItem.id)
+      ].slice(0, 12);
+
+      persistSavedFilterPresets(user.id, next);
+      return next;
+    });
+
+    pushToast("Filter sparade.", "success");
+  }
+
+  function deleteSavedFilter(filterId) {
+    if (!user) return;
+    setFilterPresets((previous) => {
+      const next = previous.filter((item) => item.id !== filterId);
+      persistSavedFilterPresets(user.id, next);
+      return next;
+    });
+    pushToast("Sparat filter borttaget.", "info");
+  }
+
+  function saveAiSearch(payload) {
+    if (!user) return;
+    const prompt = String(payload?.prompt || "").trim();
+    if (!prompt) return;
+
+    const filters = normalizeFilters(payload?.filters || savedFilters);
+
+    setSavedAiSearches((previous) => {
+      const duplicate = previous.find((item) => item.prompt === prompt && JSON.stringify(item.filters) === JSON.stringify(filters));
+      const next = [
+        {
+          id: duplicate?.id || crypto.randomUUID(),
+          prompt,
+          filters,
+          createdAt: duplicate?.createdAt || new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        },
+        ...previous.filter((item) => item.id !== duplicate?.id)
+      ].slice(0, 20);
+
+      persistSavedAiSearches(user.id, next);
+      return next;
+    });
+
+    pushToast("AI-sökning sparad.", "success");
+  }
+
+  function deleteSavedAiSearch(searchId) {
+    if (!user) return;
+    setSavedAiSearches((previous) => {
+      const next = previous.filter((item) => item.id !== searchId);
+      persistSavedAiSearches(user.id, next);
+      return next;
+    });
+    pushToast("Sparad AI-sökning borttagen.", "info");
+  }
+
+  async function toggleFavorite(listingId) {
+    const exists = favorites.some((entry) => entry.listingId === listingId);
+    if (exists) {
+      await favoriteApi.removeFavorite(listingId);
+    } else {
+      await favoriteApi.addFavorite(listingId);
+    }
+
+    const { favorites: favoriteData } = await favoriteApi.getFavorites();
+    setFavorites(favoriteData);
+
+    await trackEvent(analyticsEventNames.FAVORITE_TOGGLED, {
+      listingId,
+      state: exists ? "removed" : "added"
+    });
+
+    pushToast(exists ? "Favorit borttagen." : "Favorit sparad.", "success");
+  }
+
+  async function requestViewing(payload) {
+    const { viewing } = await viewingsApi.createViewing(payload);
+    const { viewings: viewingData } = await viewingsApi.getViewings();
+    setViewings(viewingData);
+
+    await trackEvent(analyticsEventNames.VIEWING_REQUESTED, {
+      listingId: payload.listingId
+    });
+
+    pushToast("Visningsförfrågan skickad.", "success");
+    return viewing;
+  }
+
+  async function createListing(payload) {
+    const response = await listingApi.createListing(payload);
+    await refreshCoreData();
+    return response;
+  }
+
+  async function updateListing(listingId, payload) {
+    const response = await listingApi.updateListing(listingId, payload);
+    await refreshCoreData();
+    return response;
+  }
+
+  async function deleteListing(listingId) {
+    await listingApi.deleteListing(listingId);
+    await refreshCoreData();
+    pushToast("Objektet har raderats.", "success");
+  }
+
+  async function publishListing(listingId) {
+    const response = await listingApi.publishListing(listingId);
+    await refreshCoreData();
+
+    await trackEvent(analyticsEventNames.LISTING_PUBLISHED, {
+      listingId
+    });
+
+    pushToast("Annons publicerad.", "success");
+    return response;
+  }
+
+  async function requestListingVerification(listingId) {
+    await listingApi.requestVerification(listingId);
+    await refreshCoreData();
+    pushToast("Verifieringsförfrågan skickad.", "info");
+  }
+
+  async function runAiSearch(prompt, currentFilters) {
+    const response = await aiApi.runSearch({
+      prompt,
+      currentFilters
+    });
+
+    await trackEvent(analyticsEventNames.AI_PROMPT_SUBMITTED, {
+      promptLength: prompt.length
+    });
+
+    setAiHistory((previous) => [
+      {
+        id: crypto.randomUUID(),
+        prompt,
+        response: response.explanation,
+        createdAt: new Date().toISOString()
+      },
+      ...previous
+    ].slice(0, 5));
+
+    return response;
+  }
+
+  async function updateLead(leadId, payload) {
+    const { lead } = await leadsApi.updateLead(leadId, payload);
+    const { leads: leadData } = await leadsApi.getLeads();
+    setLeads(leadData);
+
+    await trackEvent(analyticsEventNames.LEAD_STATUS_CHANGED, {
+      leadId,
+      status: payload.status
+    });
+
+    pushToast("Intresseanmälan uppdaterad.", "success");
+    return lead;
+  }
+
+  const value = useMemo(
+    () => ({
+      isBootstrapping,
+      user,
+      listings,
+      favorites,
+      viewings,
+      leads,
+      savedFilters,
+      filterPresets,
+      savedAiSearches,
+      aiHistory,
+      toasts,
+      pushToast,
+      signup,
+      login,
+      logout,
+      completeOnboarding,
+      switchRole,
+      searchListings,
+      saveCurrentFilters,
+      deleteSavedFilter,
+      saveAiSearch,
+      deleteSavedAiSearch,
+      toggleFavorite,
+      requestViewing,
+      createListing,
+      updateListing,
+      deleteListing,
+      publishListing,
+      requestListingVerification,
+      runAiSearch,
+      updateLead,
+      refreshCoreData,
+      defaultFilters
+    }),
+    [
+      aiHistory,
+      filterPresets,
+      favorites,
+      isBootstrapping,
+      leads,
+      listings,
+      savedAiSearches,
+      savedFilters,
+      toasts,
+      user,
+      viewings
+    ]
+  );
+
+  return <AppStateContext.Provider value={value}>{children}</AppStateContext.Provider>;
+}
+
+export function useAppState() {
+  const context = useContext(AppStateContext);
+  if (!context) {
+    throw new Error("useAppState måste användas inom AppProvider");
+  }
+  return context;
+}

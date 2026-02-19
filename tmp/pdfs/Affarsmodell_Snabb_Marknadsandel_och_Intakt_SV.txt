@@ -1,0 +1,141 @@
+Affärsmodell för snabb marknadsandel och tidig intäkt
+Version: 11 februari 2026
+
+Målbild
+
+Ni vill:
+- ta marknadsandel snabbt,
+- börja tjäna pengar tidigt,
+- hålla manuell drift så låg som möjligt,
+- inte bygga en verksamhet med personal som visar lokaler.
+
+Rekommenderad modell
+
+Bästa upplägget är en självbetjänad B2B-marknadsplats (inte klassisk C2C).
+
+1. Låt hyresvärdar och fastighetsägare publicera själva.
+2. Publicera själva endast i uppstartsfasen för att seed:a utbudet (första 50-100 objekt).
+3. Ta inte betalt för standardpublicering i början, så ni inte bromsar tillväxt.
+4. Tjäna pengar på kvalificerade leads, premium-synlighet och abonnemang.
+5. Håll er roll som plattform (inte aktiv förmedlare) för att kunna driva med liten organisation.
+6. Erbjud valbar AI-sök för hyresgäster: konversationsbaserad behovsinsamling som ger automatiska matchningsförslag utan manuell handpåläggning från ert team.
+
+Varför detta är rätt i Stockholm just nu
+
+1. Marknaden är redan konkurrensutsatt, så distributionshastighet och datakvalitet är viktigare än manuell rådgivning.
+2. Ett self-serve-upplägg ger snabbare expansion utan linjär personalökning.
+3. Fastighetsägare vill ha kontroll över data, tillgänglighet och svarstider direkt i ett eget konto.
+
+Intäktsmodell i fyra lager
+
+1. Basnivå (tillväxtmotor)
+- Gratis standardannons för verifierade värdar.
+- Mål: få in brett utbud snabbt.
+
+2. Transaktionsnära intäkt (tidig monetisering)
+- Avgift per kvalificerad lead.
+- Kvalificerad lead kan definieras som verifierad kontakt som matchar budget, yta, område och tidsplan.
+- Alternativ: success fee vid signerat avtal (mer komplext att administrera).
+
+3. SaaS-intäkt (stabil MRR)
+- Pro-abonnemang för större annonsörer och förvaltare.
+- Exempel på Pro-funktioner: fler användare, CRM-pipeline, API/CSV-import, mer statistik, prioriterad support, SLA-rapporter.
+
+4. Media/intäkt från annonser (sekundärt)
+- Sponsrade placeringar och bannerformat först när ni har hög trafik.
+- Ska inte vara primär intäkt i tidigt skede.
+
+Publicering av annonser: föreslagen process
+
+1. Onboarding och verifiering
+- Värd skapar konto och verifieras som företag.
+- Grundläggande KYC och företagsverifiering minskar spam och bedrägerier.
+
+2. Skapa annons via strukturerad mall
+- Obligatoriska fält: pris, yta, tillträde, bindningstid, driftkostnader, bilder, planritning, adress.
+- Standardiserad datastruktur gör jämförelse möjlig för hyresgästen.
+
+3. Kvalitetskontroll och status
+- Annons publiceras med status "Verifierad" när data klarar validering.
+- Systemet påminner om bekräftelse var 7/14/30 dag.
+- Ej bekräftade annonser pausas automatiskt.
+
+4. Lead-hantering
+- Leads skickas direkt till värden i plattformen.
+- Ni tillhandahåller inbox, notiser och tydliga svarstidsmål.
+
+5. Visning och dialog
+- Bokning sker direkt mellan parter via kalenderflöde.
+- Plattformen hanterar koordinering men ni visar inte lokaler.
+
+6. Offert och avtal
+- Parterna avslutar affären mellan sig.
+- Plattformen kan erbjuda mallar och e-sign-partner, men utan manuell förmedling.
+
+AI-sök för hyresgäst: föreslagen funktion
+
+1. Start av AI-sök
+- Hyresgästen väljer "Sök med AI" i stället för vanlig filter-sökning.
+
+2. Behovsinsamling i chat
+- Chatten samlar in krav som budget, område, yta, teamstorlek, inflyttningsdatum, avtalslängd och särskilda behov.
+
+3. Matchning med motivering
+- AI visar 5-10 lokalförslag med kort motivering till varför varje förslag matchar behoven.
+
+4. Förfining i dialog
+- Hyresgästen kan justera krav i samma konversation och få uppdaterade träffar direkt.
+
+5. Konvertering till handling
+- Varje förslag ska ha tydliga knappar för "Skicka förfrågan" och "Boka visning", så att hela flödet förblir självbetjänat.
+
+Är modellen C2C?
+
+Nej, i huvudsak inte.
+
+1. Primärt B2B: fastighetsägare/operatörer till företag som hyresgäst.
+2. Delvis C2B/B2B-sublease: när företag hyr ut överskottsyta i andra hand.
+
+Best case-scenario (6-9 månader)
+
+1. Geografiskt fokus: Stockholm + ett tydligt segment (exempelvis 5-80 anställda).
+2. Utbudsmål: 150-300 aktiva annonsörer.
+3. Katalogmål: 500-1 500 aktiva annonser.
+4. Monetisering: 20-30 % av annonsörer på leadavgifter och/eller Pro-plan.
+5. Team: litet operativt team med hög grad av automation.
+
+KPI:er att styra på
+
+1. Tid till första kvalificerade lead.
+2. Svarstid från värd.
+3. Lead-till-visning.
+4. Visning-till-offert.
+5. Andel aktuella annonser.
+6. Churn per annonsör.
+7. Intäkt per aktiv annonsör.
+
+Automationsprinciper för minimal manuell drift
+
+1. Tvingande datamall för all publicering.
+2. Automatiska påminnelser och auto-paus av inaktiva annonser.
+3. Automatisk lead-scoring och spamfilter.
+4. Standardiserad statuspipeline: Ny -> Kontaktad -> Visning -> Offert -> Avtal.
+5. Självservice för fakturering, kvitton och planuppgraderingar.
+
+Regulatorisk ram (Sverige)
+
+Om ni går från ren plattform till faktisk förmedling/mäkleri kan registreringskrav hos FMI bli aktuella.
+FMI beskriver undantag för lokalförmedling när månadshyran alltid understiger 10 000 EUR.
+Över den nivån kan registreringsskyldighet gälla.
+
+Praktisk rekommendation:
+- Definiera tidigt om ni är annonsplattform eller förmedlare.
+- Säkerställ juridisk genomgång innan bred lansering.
+
+Sammanfattning
+
+Snabbaste vägen till marknadsandel och intäkt är:
+- gratis standardpublicering för att driva utbud,
+- tidig betalning på kvalificerade leads,
+- Pro-abonnemang för återkommande MRR,
+- hög automationsgrad så ni slipper bygga en tung, manuell organisation.

@@ -1,0 +1,6 @@
+<svg width="1200" height="800" viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg">
+  <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#81361d"/><stop offset="100%" stop-color="#f7be6b"/></linearGradient></defs>
+  <rect width="1200" height="800" fill="url(#g)"/><rect x="100" y="120" width="1000" height="560" rx="28" fill="#ffffff" fill-opacity="0.16"/>
+  <text x="140" y="220" fill="#ffffff" font-size="58" font-family="Avenir Next, Helvetica Neue, sans-serif">Mocklokal 03</text>
+  <text x="140" y="286" fill="#fff7ef" font-size="36" font-family="Avenir Next, Helvetica Neue, sans-serif">Vasastan - Studio - Omslagsbild</text>
+</svg>
