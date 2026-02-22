@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import Breadcrumbs from "../../components/layout/Breadcrumbs";
 import { parseAmenities } from "../../lib/formatters";
 import { navigateTo } from "../../lib/router";
 
@@ -17,6 +18,11 @@ function buildDraft(listing) {
 
 function ManageListingPage({ app, listingId }) {
   const { user, listings, updateListing, deleteListing, publishListing } = app;
+  useEffect(() => {
+    if (!user?.id) return;
+    void app.refreshCoreData(user);
+  }, [app, user]);
+
   const listing = useMemo(
     () => listings.find((item) => String(item.id) === String(listingId) && item.ownerId === user?.id),
     [listings, listingId, user?.id]
@@ -29,7 +35,7 @@ function ManageListingPage({ app, listingId }) {
     return (
       <section className="h-full overflow-y-auto">
         <div className="mx-auto w-full max-w-6xl p-6">
-          <button type="button" className="btn-secondary px-3 py-2 text-xs" onClick={() => navigateTo("/app/publish")}>
+          <button type="button" className="btn-secondary px-3 py-2 text-xs" onClick={() => navigateTo("/app/my-listings")}>
             Tillbaka till översikt
           </button>
           <div className="mt-4 rounded-2xl border border-black/10 bg-white p-6">
@@ -63,7 +69,15 @@ function ManageListingPage({ app, listingId }) {
   return (
     <section className="h-full overflow-y-auto">
       <div className="mx-auto w-full max-w-7xl p-4 pb-8 sm:p-6">
-        <button type="button" className="btn-secondary px-3 py-2 text-xs" onClick={() => navigateTo("/app/publish")}>
+        <Breadcrumbs
+          className="mb-3"
+          items={[
+            { label: "Startsida", to: "/" },
+            { label: "Dina objekt", to: "/app/my-listings" },
+            { label: `Hantera ${listing.title || "Objekt"}` }
+          ]}
+        />
+        <button type="button" className="btn-secondary px-3 py-2 text-xs" onClick={() => navigateTo("/app/my-listings")}>
           Tillbaka till översikt
         </button>
 
@@ -89,7 +103,7 @@ function ManageListingPage({ app, listingId }) {
               onClick={async () => {
                 await deleteListing(listing.id);
                 app.pushToast("Objekt raderat.", "info");
-                navigateTo("/app/publish");
+                navigateTo("/app/my-listings");
               }}
             >
               Radera objekt

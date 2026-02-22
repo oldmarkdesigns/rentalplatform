@@ -130,7 +130,7 @@ function AiSearchPanel({ listings, quickNeeds, filters, onApplyFilters, onOpenLi
               className="flex items-center justify-between rounded-xl border border-ink-200 bg-white px-3 py-2 text-left text-sm text-ink-800 hover:border-brand-300"
             >
               <span>{item.title}</span>
-              <span className="text-xs font-semibold text-brand-700">{item.score} match</span>
+              <span className="text-xs font-semibold text-brand-700">{item.score}</span>
             </button>
           ))}
         </div>

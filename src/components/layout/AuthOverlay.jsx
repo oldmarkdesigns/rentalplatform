@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { defaultAppPathForRole, navigateTo } from "../../lib/router";
+import { navigateTo } from "../../lib/router";
 
 function AuthOverlay({ open, mode = "login", preferredRole = "renter", onClose, onLogin, onSignup }) {
   const [activeForm, setActiveForm] = useState(mode === "signup" ? "signup" : "login");
@@ -49,9 +49,8 @@ function AuthOverlay({ open, mode = "login", preferredRole = "renter", onClose, 
     setPending(true);
     setError("");
     try {
-      const user = await onLogin(loginForm);
+      await onLogin(loginForm);
       onClose?.();
-      navigateTo(user.onboardingCompleted ? defaultAppPathForRole(user.role) : "/onboarding");
     } catch (submitError) {
       setError(submitError.message || "Inloggning misslyckades.");
     } finally {
@@ -94,7 +93,7 @@ function AuthOverlay({ open, mode = "login", preferredRole = "renter", onClose, 
 
         <div className="my-2 flex items-center gap-2">
           <span className="h-px flex-1 bg-black/10" />
-          <span className="text-xs font-semibold uppercase tracking-wide text-ink-500">E-post</span>
+          <span className="text-xs font-semibold uppercase tracking-wide text-ink-500">Fyll i dina uppgifter</span>
           <span className="h-px flex-1 bg-black/10" />
         </div>
 

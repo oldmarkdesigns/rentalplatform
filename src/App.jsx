@@ -10,8 +10,8 @@ import FavoritesPage from "./pages/app/FavoritesPage";
 import LeadsPage from "./pages/app/LeadsPage";
 import ListingDetailPage from "./pages/app/ListingDetailPage";
 import ManageListingPage from "./pages/app/ManageListingPage";
-import MyListingsPage from "./pages/app/MyListingsPage";
 import ProfilePage from "./pages/app/ProfilePage";
+import PublishPage from "./pages/app/PublishPage";
 import PublisherOverviewPage from "./pages/app/PublisherOverviewPage";
 import RentPage from "./pages/app/RentPage";
 import ViewingsPage from "./pages/app/ViewingsPage";
@@ -20,6 +20,7 @@ import { AppProvider, useAppState } from "./state/AppState";
 
 function AppContent() {
   const pathname = usePathname();
+  const routeAnimationKey = pathname.startsWith("/app/") ? "/app" : pathname;
   const app = useAppState();
   const [bookingListing, setBookingListing] = useState(null);
   const [authOverlay, setAuthOverlay] = useState({
@@ -103,9 +104,9 @@ function AppContent() {
       const rawRoles = Array.isArray(app.user.roles) ? app.user.roles : [role];
       const roleSet = new Set(rawRoles.filter((item) => item === "renter" || item === "publisher"));
       const hasPublisherRole = roleSet.has("publisher");
-      const renterAllowed = ["/app/rent", "/app/favorites", "/app/viewings", "/app/profile", "/app/settings", "/app/publish", "/app/listings"];
-      const publisherAllowed = ["/app/my-listings", "/app/leads", "/app/profile", "/app/settings", "/app/rent", "/app/publish", "/app/listings"];
-      const extraForPublisherMembers = hasPublisherRole ? ["/app/my-listings"] : [];
+      const renterAllowed = ["/app/rent", "/app/favorites", "/app/viewings", "/app/profile", "/app/settings", "/app/listings"];
+      const publisherAllowed = ["/app/my-listings", "/app/publish", "/app/leads", "/app/profile", "/app/settings", "/app/rent", "/app/listings"];
+      const extraForPublisherMembers = hasPublisherRole ? ["/app/my-listings", "/app/publish", "/app/leads"] : [];
       const allowedBases = role === "publisher" ? publisherAllowed : [...renterAllowed, ...extraForPublisherMembers];
       const pathnameAllowed = allowedBases.some((base) => pathname === base || pathname.startsWith(`${base}/`));
 
@@ -120,18 +121,48 @@ function AppContent() {
       }
 
       if (role === "publisher" && pathname.startsWith("/app/") && !pathnameAllowed) {
-        navigateTo("/app/publish", { replace: true });
+        navigateTo("/app/my-listings", { replace: true });
       }
     }
   }, [app.isBootstrapping, app.user, pathname]);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return undefined;
+
+    const targets = Array.from(
+      document.querySelectorAll("h1, h2, h3, article, .surface, [data-reveal]")
+    ).filter((element) => !element.closest("header"));
+
+    targets.forEach((element) => {
+      element.classList.remove("reveal-in");
+      element.classList.add("reveal-init");
+    });
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add("reveal-in");
+            observer.unobserve(entry.target);
+          }
+        });
+      },
+      {
+        threshold: 0.12,
+        rootMargin: "0px 0px -8% 0px"
+      }
+    );
+
+    targets.forEach((element) => observer.observe(element));
+
+    return () => observer.disconnect();
+  }, [pathname, app.isBootstrapping]);
+
   if (app.isBootstrapping) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-[#f4f5f7]">
-        <div className="rounded-3xl border border-black/10 bg-white px-6 py-5 text-center">
-          <p className="text-lg font-semibold">Laddar plattformen...</p>
-          <p className="text-sm text-ink-600">Initierar session och mock-data.</p>
-        </div>
+      <main className="min-h-screen bg-white" aria-hidden="true">
+        <div className="h-screen w-full" />
       </main>
     );
   }
@@ -139,7 +170,7 @@ function AppContent() {
   let content = null;
 
   if (pathname === "/") {
-    content = <LandingPage user={app.user} onOpenAuthOverlay={openAuthOverlay} />;
+    content = <LandingPage user={app.user} onOpenAuthOverlay={openAuthOverlay} onLogout={app.logout} />;
   } else if (pathname === "/forgot-password") {
     content = <ForgotPasswordPage />;
   } else if (pathname === "/onboarding") {
@@ -164,7 +195,7 @@ function AppContent() {
           </AppShell>
         );
       } else {
-        content = <LandingPage user={app.user} onOpenAuthOverlay={openAuthOverlay} />;
+        content = <LandingPage user={app.user} onOpenAuthOverlay={openAuthOverlay} onLogout={app.logout} />;
       }
     } else {
     let appRouteContent = null;
@@ -177,7 +208,7 @@ function AppContent() {
     } else if (managedListingId) {
       appRouteContent = <ManageListingPage app={app} listingId={managedListingId} />;
     } else if (pathname === "/app/my-listings") {
-      appRouteContent = <MyListingsPage app={app} />;
+      appRouteContent = <PublisherOverviewPage app={app} />;
     } else if (pathname === "/app/favorites") {
       appRouteContent = (
         <FavoritesPage
@@ -195,7 +226,7 @@ function AppContent() {
     } else if (pathname === "/app/settings") {
       appRouteContent = <ProfilePage app={app} />;
     } else if (pathname === "/app/publish") {
-      appRouteContent = <PublisherOverviewPage app={app} />;
+      appRouteContent = <PublishPage app={app} />;
     } else {
       appRouteContent = activeRole === "publisher" ? <PublisherOverviewPage app={app} /> : <RentPage app={app} />;
     }
@@ -207,12 +238,14 @@ function AppContent() {
       );
     }
   } else {
-    content = <LandingPage user={app.user} onOpenAuthOverlay={openAuthOverlay} />;
+    content = <LandingPage user={app.user} onOpenAuthOverlay={openAuthOverlay} onLogout={app.logout} />;
   }
 
   return (
     <>
-      {content}
+      <div key={routeAnimationKey} className="page-enter">
+        {content}
+      </div>
 
       <ViewingRequestModal
         listing={bookingListing}

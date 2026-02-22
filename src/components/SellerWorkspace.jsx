@@ -48,9 +48,6 @@ function ListingVisualCard({ listing, shortlisted, onOpenListing, onBookViewing,
             <span className="rounded-xl border border-white/40 bg-white/90 px-2 py-1 text-[11px] font-semibold text-black">Verifierad</span>
           )}
         </div>
-        <div className="absolute bottom-3 left-3 rounded-xl bg-white/92 px-2 py-1 text-[11px] font-semibold text-black">
-          {listing.score} match
-        </div>
       </button>
 
       <div className="space-y-3 p-4">
@@ -130,7 +127,7 @@ function SellerWorkspace({
   }
 
   return (
-    <main className="min-h-screen w-full bg-[#f4f5f7] text-black">
+    <main className="min-h-screen w-full bg-white text-black">
       <header className="flex flex-wrap items-center justify-between gap-3 border-b border-black/10 bg-white px-4 py-3 sm:px-6">
         <div className="flex items-center gap-3">
           <span className="text-sm font-semibold">Lokalflöde Stockholm</span>

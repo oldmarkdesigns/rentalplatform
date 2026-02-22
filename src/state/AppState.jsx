@@ -13,8 +13,17 @@ const defaultFilters = {
   maxSize: "",
   maxBudget: 250000,
   teamSize: "",
+  transitDistance: "",
+  moveInDate: "",
+  contractFlex: "",
+  accessHours: "",
+  parkingType: "",
+  layoutType: "",
   requirePrice: false,
   onlyBostadsratt: false,
+  includeOperatingCosts: false,
+  accessibilityAdapted: false,
+  ecoCertified: false,
   daysOnMarket: "all",
   keyword: "",
   advertiser: "Alla",
@@ -124,6 +133,9 @@ function normalizeFilters(filters) {
     ...defaultFilters,
     ...filters,
     type: normalizedType,
+    includeOperatingCosts: Boolean(filters?.includeOperatingCosts),
+    accessibilityAdapted: Boolean(filters?.accessibilityAdapted),
+    ecoCertified: Boolean(filters?.ecoCertified),
     verified: Boolean(filters?.verified),
     readyNow: Boolean(filters?.readyNow),
     requirePrice: Boolean(filters?.requirePrice),
@@ -195,7 +207,10 @@ export function AppProvider({ children }) {
     setFavorites(favoriteData);
     setViewings(viewingData);
 
-    if (activeUser.role === "publisher") {
+    const activeRoles = Array.isArray(activeUser.roles) ? activeUser.roles : [activeUser.role || "renter"];
+    const hasPublisherAccess = activeRoles.includes("publisher");
+
+    if (hasPublisherAccess) {
       const { leads: leadData } = await leadsApi.getLeads();
       setLeads(leadData);
     } else {
@@ -502,8 +517,9 @@ export function AppProvider({ children }) {
 
   async function updateLead(leadId, payload) {
     const { lead } = await leadsApi.updateLead(leadId, payload);
-    const { leads: leadData } = await leadsApi.getLeads();
+    const [{ leads: leadData }, { viewings: viewingData }] = await Promise.all([leadsApi.getLeads(), viewingsApi.getViewings()]);
     setLeads(leadData);
+    setViewings(viewingData);
 
     await trackEvent(analyticsEventNames.LEAD_STATUS_CHANGED, {
       leadId,

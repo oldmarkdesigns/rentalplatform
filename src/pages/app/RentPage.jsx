@@ -1,14 +1,24 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import ListingVisualCard from "../../components/app/ListingVisualCard";
 import ViewingRequestModal from "../../components/app/ViewingRequestModal";
+import FurnishingToggle from "../../components/app/FurnishingToggle";
+import Breadcrumbs from "../../components/layout/Breadcrumbs";
 import {
+  BalconyIcon,
   BikeIcon,
   BuildingIcon,
   CarIcon,
+  DumbbellIcon,
+  LockerIcon,
+  LoungeIcon,
   MapIcon,
+  PenthouseIcon,
   ResetIcon,
+  RooftopIcon,
   SaveIcon,
   SearchIcon,
+  ShieldIcon,
+  SnowflakeIcon,
   SparklesIcon,
   UserIcon,
   UtensilsIcon,
@@ -43,7 +53,21 @@ const editorAmenityOptions = [
   { value: "Kök", label: "Kök", icon: UtensilsIcon },
   { value: "Mötesrum", label: "Mötesrum", icon: BuildingIcon },
   { value: "Fiber", label: "Fiber", icon: WifiIcon },
-  { value: "Reception", label: "Reception", icon: UserIcon }
+  { value: "Reception", label: "Reception", icon: UserIcon },
+  { value: "Balkong", label: "Balkong", icon: BalconyIcon },
+  { value: "Takterrass", label: "Takterrass", icon: RooftopIcon },
+  { value: "Takvåning", label: "Takvåning", icon: PenthouseIcon },
+  { value: "Gym", label: "Gym", icon: DumbbellIcon },
+  { value: "Omklädningsrum", label: "Omklädningsrum", icon: LockerIcon },
+  { value: "Air condition", label: "Air condition", icon: SnowflakeIcon },
+  { value: "Lounge", label: "Lounge", icon: LoungeIcon },
+  { value: "Förråd", label: "Förråd", icon: LockerIcon },
+  { value: "Lastzon", label: "Lastzon", icon: CarIcon },
+  { value: "Telefonbås", label: "Telefonbås", icon: BuildingIcon },
+  { value: "Väntrum", label: "Väntrum", icon: UserIcon },
+  { value: "Pentry", label: "Pentry", icon: UtensilsIcon },
+  { value: "Skyltfönster", label: "Skyltfönster", icon: BuildingIcon },
+  { value: "Säkerhetsdörr", label: "Säkerhetsdörr", icon: ShieldIcon }
 ];
 
 const furnishedOptions = [
@@ -51,17 +75,44 @@ const furnishedOptions = [
   { value: "yes", label: "Möblerad" },
   { value: "no", label: "Omöblerad" }
 ];
+const transitDistanceOptions = ["Alla", "0-3 min", "3-7 min", "7-12 min", "12+ min"];
+const contractFlexOptions = ["Alla", "Korttid", "Långtid", "Flexibelt avtal", "Break option"];
+const accessHoursOptions = ["Alla", "24/7", "Kontorstid", "Kväll/helg"];
+const parkingTypeOptions = ["Alla", "Ingen parkering", "Garage", "Gatuparkering", "Laddplatser"];
+const layoutTypeOptions = ["Alla", "Öppet landskap", "Cellkontor", "Hybrid", "Showroom"];
+const advertiserOptions = ["Alla", "AMF Fastigheter", "Vasakronan", "Castellum", "Fabege", "Skandia Fastigheter"];
 const amenityAliasesByValue = {
   "cykelförråd": ["cykelförråd", "cykelrum"],
   garage: ["garage", "parkering"],
   kök: ["kök", "kitchen"],
   mötesrum: ["mötesrum", "konferensrum"],
   fiber: ["fiber", "wifi"],
-  reception: ["reception"]
+  reception: ["reception"],
+  balkong: ["balkong", "balcony"],
+  takterrass: ["takterrass", "roof terrace", "terrace"],
+  takvåning: ["takvåning", "penthouse"],
+  gym: ["gym", "träning", "fitness"],
+  omklädningsrum: ["omklädningsrum", "locker room", "omklädning"],
+  "air condition": ["air condition", "ac", "a/c", "luftkonditionering"],
+  lounge: ["lounge", "social yta", "sociala ytor"],
+  förråd: ["förråd", "förrad", "storage"],
+  lastzon: ["lastzon", "loading zone", "lastkaj"],
+  telefonbås: ["telefonbås", "telefonrum", "phone booth"],
+  väntrum: ["väntrum", "waiting room"],
+  pentry: ["pentry", "pantry"],
+  skyltfönster: ["skyltfönster", "storefront"],
+  säkerhetsdörr: ["säkerhetsdörr", "säkerhet", "secure", "security", "säker entré", "säker entre"]
 };
 
 const heroInputClass = "w-full rounded-2xl border border-black/15 bg-[#f7f9fc] px-3 py-3 text-sm text-ink-900 placeholder:text-ink-500 focus:border-[#0f1930] focus:outline-none";
-const heroSelectClass = "w-full rounded-2xl border border-black/15 bg-[#f7f9fc] px-3 py-3 pr-10 text-sm text-ink-900 appearance-none focus:border-[#0f1930] focus:outline-none [background-image:url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2214%22 height=%2214%22 viewBox=%220 0 20 20%22 fill=%22none%22%3E%3Cpath d=%22M6 8L10 12L14 8%22 stroke=%22%23263842%22 stroke-width=%221.8%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22/%3E%3C/svg%3E')] [background-repeat:no-repeat] [background-position:right_0.7rem_center] [background-size:14px_14px]";
+const heroSelectClass = "select-chevron w-full rounded-2xl border border-black/15 bg-[#f7f9fc] px-3 py-3 pr-10 text-sm text-ink-900 focus:border-[#0f1930] focus:outline-none";
+
+function parseAmenityTerms(value) {
+  return String(value || "")
+    .split(",")
+    .map((token) => token.trim())
+    .filter(Boolean);
+}
 
 function hashSeed(value) {
   let hash = 0;
@@ -394,6 +445,16 @@ function hasRunSearchInUrl() {
   return new URLSearchParams(window.location.search).get("run") === "1";
 }
 
+function hasAvailableListingsViewInUrl() {
+  if (typeof window === "undefined") return false;
+  return new URLSearchParams(window.location.search).get("view") === "available";
+}
+
+function readFlagParam(params, key, legacyKey = "") {
+  const raw = params.get(key) ?? (legacyKey ? params.get(legacyKey) : "");
+  return raw === "1" || raw === "true";
+}
+
 function RentPage({ app, isGuest = false, onRequireAuth }) {
   const {
     listings,
@@ -410,8 +471,10 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
   const [filters, setFilters] = useState(savedFilters);
   const [isHydratingLandingSearch, setIsHydratingLandingSearch] = useState(() => hasRunSearchInUrl());
   const [showSearchEditor, setShowSearchEditor] = useState(false);
+  const [isClosingSearchEditor, setIsClosingSearchEditor] = useState(false);
   const [showAdvancedSearchEditor, setShowAdvancedSearchEditor] = useState(false);
   const [showEditorAiPanel, setShowEditorAiPanel] = useState(false);
+  const [showEditorAiInfo, setShowEditorAiInfo] = useState(false);
   const [editorModeOpacity, setEditorModeOpacity] = useState(1);
   const [editorAiPrompt, setEditorAiPrompt] = useState("");
   const [amenityQuery, setAmenityQuery] = useState("");
@@ -427,8 +490,19 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
   const [showMap, setShowMap] = useState(true);
   const [sortBy, setSortBy] = useState("relevance");
   const [useNewSearchCta, setUseNewSearchCta] = useState(false);
+  const [isAvailableListingsView, setIsAvailableListingsView] = useState(() => hasAvailableListingsViewInUrl());
+  const [isLeavingAvailableView, setIsLeavingAvailableView] = useState(false);
+  const [isEnteringAvailableView, setIsEnteringAvailableView] = useState(false);
+  const [isResettingToAvailable, setIsResettingToAvailable] = useState(false);
+  const [showSearchSummaryCard, setShowSearchSummaryCard] = useState(() => !hasAvailableListingsViewInUrl());
+  const [animateSearchSummaryIn, setAnimateSearchSummaryIn] = useState(false);
   const landingSearchAppliedRef = useRef(false);
   const editorModeTimerRef = useRef(null);
+  const closeEditorTimerRef = useRef(null);
+  const summaryFadeTimerRef = useRef(null);
+  const availableTransitionTimerRef = useRef(null);
+  const availableEnterTimerRef = useRef(null);
+  const resetToAvailableTimerRef = useRef(null);
 
   const favoriteIds = useMemo(() => new Set(favorites.map((entry) => entry.listingId)), [favorites]);
   const listingsById = useMemo(() => new Map(listings.map((item) => [item.id, item])), [listings]);
@@ -455,29 +529,146 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
   }, [savedFilters]);
 
   useEffect(() => {
+    function syncAvailableViewFromUrl() {
+      setIsAvailableListingsView(hasAvailableListingsViewInUrl());
+    }
+
+    window.addEventListener("popstate", syncAvailableViewFromUrl);
+    window.addEventListener("app:navigate", syncAvailableViewFromUrl);
+    return () => {
+      window.removeEventListener("popstate", syncAvailableViewFromUrl);
+      window.removeEventListener("app:navigate", syncAvailableViewFromUrl);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isAvailableListingsView) return;
+    if (closeEditorTimerRef.current) {
+      clearTimeout(closeEditorTimerRef.current);
+      closeEditorTimerRef.current = null;
+    }
+    if (availableTransitionTimerRef.current) {
+      clearTimeout(availableTransitionTimerRef.current);
+      availableTransitionTimerRef.current = null;
+    }
+    setIsClosingSearchEditor(false);
+    setIsLeavingAvailableView(false);
+    setIsResettingToAvailable(false);
+    setShowSearchEditor(false);
+    setShowSearchSummaryCard(false);
+    setAnimateSearchSummaryIn(false);
+    setShowAdvancedSearchEditor(false);
+    setShowEditorAiPanel(false);
+    setEditorModeOpacity(1);
+  }, [isAvailableListingsView]);
+
+  useEffect(() => {
     return () => {
       if (editorModeTimerRef.current) {
         clearTimeout(editorModeTimerRef.current);
       }
+      if (closeEditorTimerRef.current) {
+        clearTimeout(closeEditorTimerRef.current);
+      }
+      if (summaryFadeTimerRef.current) {
+        clearTimeout(summaryFadeTimerRef.current);
+      }
+      if (availableTransitionTimerRef.current) {
+        clearTimeout(availableTransitionTimerRef.current);
+      }
+      if (availableEnterTimerRef.current) {
+        clearTimeout(availableEnterTimerRef.current);
+      }
+      if (resetToAvailableTimerRef.current) {
+        clearTimeout(resetToAvailableTimerRef.current);
+      }
     };
   }, []);
 
+  function transitionFromAvailableToResults() {
+    if (availableTransitionTimerRef.current) {
+      clearTimeout(availableTransitionTimerRef.current);
+    }
+    setShowSearchSummaryCard(false);
+    setAnimateSearchSummaryIn(false);
+    setIsLeavingAvailableView(true);
+    setShowAdvancedSearchEditor(false);
+    setShowEditorAiPanel(false);
+    setEditorModeOpacity(1);
+    availableTransitionTimerRef.current = setTimeout(() => {
+      setIsAvailableListingsView(false);
+      setShowSearchEditor(false);
+      setIsLeavingAvailableView(false);
+      setShowSearchSummaryCard(true);
+      setAnimateSearchSummaryIn(true);
+      if (summaryFadeTimerRef.current) clearTimeout(summaryFadeTimerRef.current);
+      summaryFadeTimerRef.current = setTimeout(() => {
+        setAnimateSearchSummaryIn(false);
+        summaryFadeTimerRef.current = null;
+      }, 280);
+      navigateTo("/app/rent?run=1", { replace: true });
+      availableTransitionTimerRef.current = null;
+    }, 420);
+  }
+
+  function transitionFromResultsToAvailable() {
+    if (resetToAvailableTimerRef.current) {
+      clearTimeout(resetToAvailableTimerRef.current);
+    }
+    if (availableEnterTimerRef.current) {
+      clearTimeout(availableEnterTimerRef.current);
+    }
+    setAnimateSearchSummaryIn(false);
+    setIsResettingToAvailable(true);
+    resetToAvailableTimerRef.current = setTimeout(() => {
+      setShowSearchSummaryCard(false);
+      setIsAvailableListingsView(true);
+      setIsEnteringAvailableView(true);
+      setIsResettingToAvailable(false);
+      navigateTo("/app/rent?view=available", { replace: true });
+      availableEnterTimerRef.current = setTimeout(() => {
+        setIsEnteringAvailableView(false);
+        availableEnterTimerRef.current = null;
+      }, 360);
+      resetToAvailableTimerRef.current = null;
+    }, 240);
+  }
+
+  function closeSearchEditorSmooth() {
+    if (isClosingSearchEditor) return;
+    setShowSearchSummaryCard(false);
+    setAnimateSearchSummaryIn(false);
+    setIsClosingSearchEditor(true);
+    setShowAdvancedSearchEditor(false);
+    closeEditorTimerRef.current = setTimeout(() => {
+      setShowSearchEditor(false);
+      setIsClosingSearchEditor(false);
+      if (!isAvailableListingsView) {
+        setShowSearchSummaryCard(true);
+        setAnimateSearchSummaryIn(true);
+        if (summaryFadeTimerRef.current) clearTimeout(summaryFadeTimerRef.current);
+        summaryFadeTimerRef.current = setTimeout(() => {
+          setAnimateSearchSummaryIn(false);
+          summaryFadeTimerRef.current = null;
+        }, 280);
+      }
+      closeEditorTimerRef.current = null;
+    }, 420);
+  }
+
   function isAmenitySelected(value) {
-    const query = String(amenityQuery || "").toLowerCase();
     const normalizedValue = String(value || "").toLowerCase();
     const aliases = amenityAliasesByValue[normalizedValue] || [normalizedValue];
-    return aliases.some((alias) => query.includes(alias));
+    const selectedTerms = parseAmenityTerms(amenityQuery).map((term) => term.toLowerCase());
+    return selectedTerms.some((term) => aliases.some((alias) => term.includes(alias)));
   }
 
   function toggleAmenity(value) {
-    const tokens = amenityQuery
-      .split(/\s+/)
-      .map((token) => token.trim())
-      .filter(Boolean);
+    const tokens = parseAmenityTerms(amenityQuery);
     const lowered = String(value).toLowerCase();
     const hasValue = tokens.some((token) => token.toLowerCase() === lowered);
     const nextTokens = hasValue ? tokens.filter((token) => token.toLowerCase() !== lowered) : [...tokens, value];
-    setAmenityQuery(nextTokens.join(" "));
+    setAmenityQuery(nextTokens.join(", "));
   }
 
   function switchEditorSearchMode(nextAiEnabled) {
@@ -521,16 +712,18 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
         const aiResponse = await runAiSearch(prompt, filters);
         const nextFilters = aiResponse?.suggestedFilters || filters;
         const inferredAmenities = inferAmenitiesFromText(prompt);
-        const currentAmenities = amenityTerms
-          .split(/\s+/)
-          .map((token) => token.trim())
-          .filter(Boolean);
-        const nextAmenityTerms = Array.from(new Set([...currentAmenities, ...inferredAmenities])).join(" ");
+        const currentAmenities = parseAmenityTerms(amenityTerms);
+        const nextAmenityTerms = Array.from(new Set([...currentAmenities, ...inferredAmenities])).join(", ");
         if (nextAmenityTerms !== amenityTerms) {
           setAmenityQuery(nextAmenityTerms);
         }
         setFilters(nextFilters);
         await executeSearch(nextFilters, { aiPrompt: prompt, amenityQuery: nextAmenityTerms, furnishedFilter });
+        if (isAvailableListingsView) {
+          transitionFromAvailableToResults();
+        } else {
+          closeSearchEditorSmooth();
+        }
       } catch (_error) {
         app.pushToast("AI-sök kunde inte köras just nu.", "error");
       }
@@ -538,16 +731,54 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
     }
 
     await executeSearch(filters, { amenityQuery: amenityTerms, furnishedFilter });
+    if (isAvailableListingsView) {
+      transitionFromAvailableToResults();
+    } else {
+      closeSearchEditorSmooth();
+    }
+  }
+
+  async function submitAvailableListingsSearch(event) {
+    event.preventDefault();
+    await executeSearch(filters, { amenityQuery, furnishedFilter });
+    transitionFromAvailableToResults();
   }
 
   function openAuthPrompt(mode) {
     setAuthPromptMode(mode);
   }
 
+  function openExpandedSearchEditor() {
+    setShowSearchEditor((value) => {
+      const nextValue = !value;
+      if (nextValue) {
+        setShowSearchSummaryCard(false);
+        setAnimateSearchSummaryIn(false);
+        if (closeEditorTimerRef.current) {
+          clearTimeout(closeEditorTimerRef.current);
+          closeEditorTimerRef.current = null;
+        }
+        setIsClosingSearchEditor(false);
+        if (editorModeTimerRef.current) {
+          clearTimeout(editorModeTimerRef.current);
+          editorModeTimerRef.current = null;
+        }
+        setEditorModeOpacity(1);
+        setShowAdvancedSearchEditor(true);
+        setShowEditorAiPanel(false);
+        setAmenityQuery(appliedSearchMeta.amenityQuery || amenityQuery);
+        setFurnishedFilter(appliedSearchMeta.furnishedFilter || furnishedFilter);
+      }
+      return nextValue;
+    });
+  }
+
   async function executeSearch(nextFilters = filters, options = {}) {
     await searchListings(nextFilters);
     setIsHydratingLandingSearch(false);
-    setShowSearchEditor(false);
+    if (options.closeEditor) {
+      setShowSearchEditor(false);
+    }
     setUseNewSearchCta(Boolean(options.markAsNewSearch));
     const amenityValue = typeof options.amenityQuery === "string" ? options.amenityQuery : amenityQuery;
     const furnishedValue = typeof options.furnishedFilter === "string" ? options.furnishedFilter : furnishedFilter;
@@ -574,9 +805,11 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
     await executeSearch(resetFilters, {
       amenityQuery: "",
       furnishedFilter: "all",
-      aiPrompt: "",
-      markAsNewSearch: true
+      aiPrompt: ""
     });
+    setUseNewSearchCta(false);
+    setShowSearchEditor(false);
+    transitionFromResultsToAvailable();
   }
 
   useEffect(() => {
@@ -593,8 +826,19 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
     const typeFromUrl = String(params.get("type") || "").trim();
     const minSizeFromUrl = String(params.get("minSize") || "").trim();
     const teamSizeFromUrl = String(params.get("teamSize") || "").trim();
+    const minBudgetFromUrl = String(params.get("minBudget") || "").trim();
     const maxBudgetFromUrl = String(params.get("maxBudget") || "").trim();
     const maxSizeFromUrl = String(params.get("maxSize") || "").trim();
+    const transitDistanceFromUrl = String(params.get("transitDistance") || params.get("transit") || "").trim();
+    const moveInDateFromUrl = String(params.get("moveInDate") || params.get("moveIn") || "").trim();
+    const contractFlexFromUrl = String(params.get("contractFlex") || "").trim();
+    const accessHoursFromUrl = String(params.get("accessHours") || "").trim();
+    const parkingTypeFromUrl = String(params.get("parkingType") || params.get("parking") || "").trim();
+    const layoutTypeFromUrl = String(params.get("layoutType") || params.get("layout") || "").trim();
+    const advertiserFromUrl = String(params.get("advertiser") || "").trim();
+    const includeOperatingCostsFromUrl = readFlagParam(params, "includeOperatingCosts", "costsIncluded");
+    const accessibilityAdaptedFromUrl = readFlagParam(params, "accessibilityAdapted", "accessibility");
+    const ecoCertifiedFromUrl = readFlagParam(params, "ecoCertified");
     const amenityFromUrl = String(params.get("amenity") || "").trim();
     const furnishedFromUrl = String(params.get("furnished") || "").trim();
     const aiEnabledFromUrl = params.get("ai") === "1";
@@ -607,7 +851,18 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
       minSize: minSizeFromUrl || filters.minSize,
       maxSize: maxSizeFromUrl || filters.maxSize,
       teamSize: teamSizeFromUrl || filters.teamSize,
-      maxBudget: maxBudgetFromUrl || filters.maxBudget
+      minBudget: minBudgetFromUrl || filters.minBudget,
+      maxBudget: maxBudgetFromUrl || filters.maxBudget,
+      transitDistance: transitDistanceFromUrl || filters.transitDistance,
+      moveInDate: moveInDateFromUrl || filters.moveInDate,
+      contractFlex: contractFlexFromUrl || filters.contractFlex,
+      accessHours: accessHoursFromUrl || filters.accessHours,
+      parkingType: parkingTypeFromUrl || filters.parkingType,
+      layoutType: layoutTypeFromUrl || filters.layoutType,
+      advertiser: advertiserFromUrl || filters.advertiser,
+      includeOperatingCosts: includeOperatingCostsFromUrl || Boolean(filters.includeOperatingCosts),
+      accessibilityAdapted: accessibilityAdaptedFromUrl || Boolean(filters.accessibilityAdapted),
+      ecoCertified: ecoCertifiedFromUrl || Boolean(filters.ecoCertified)
     };
     if (amenityFromUrl) setAmenityQuery(amenityFromUrl);
     if (furnishedFromUrl === "yes" || furnishedFromUrl === "no") setFurnishedFilter(furnishedFromUrl);
@@ -626,11 +881,8 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
             }
             const inferredAmenities = inferAmenitiesFromText(aiPromptFromUrl);
             if (inferredAmenities.length > 0) {
-              const explicitAmenities = nextAmenityQuery
-                .split(/\s+/)
-                .map((token) => token.trim())
-                .filter(Boolean);
-              nextAmenityQuery = Array.from(new Set([...explicitAmenities, ...inferredAmenities])).join(" ");
+              const explicitAmenities = parseAmenityTerms(nextAmenityQuery);
+              nextAmenityQuery = Array.from(new Set([...explicitAmenities, ...inferredAmenities])).join(", ");
             }
             aiPromptApplied = aiPromptFromUrl;
           } catch (_error) {
@@ -656,8 +908,8 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
   const visibleListings = useMemo(() => {
     return sortedListings.filter((listing) => {
       const amenityText = Array.isArray(listing.amenities) ? listing.amenities.join(" ").toLowerCase() : "";
-      const query = String(appliedSearchMeta.amenityQuery || "").toLowerCase().trim();
-      if (query && !amenityText.includes(query)) {
+      const amenityTerms = parseAmenityTerms(appliedSearchMeta.amenityQuery).map((term) => term.toLowerCase());
+      if (amenityTerms.length > 0 && !amenityTerms.some((term) => amenityText.includes(term))) {
         return false;
       }
 
@@ -676,17 +928,33 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
   const activeSearchChips = useMemo(() => {
     const chips = [];
     const activeFilters = appliedSearchMeta.filters || {};
+    const minBudgetValue = String(activeFilters.minBudget ?? "").trim();
+    const maxBudgetValue = String(activeFilters.maxBudget ?? "").trim();
+    const defaultMaxBudgetValue = String(app.defaultFilters?.maxBudget ?? "").trim();
+    const hasExplicitMinBudget = minBudgetValue !== "";
+    const hasExplicitMaxBudget = maxBudgetValue !== "" && maxBudgetValue !== defaultMaxBudgetValue;
     if (appliedSearchMeta.aiPrompt) chips.push(`AI: ${appliedSearchMeta.aiPrompt}`);
     if (activeFilters.query) chips.push(`Sökord: ${activeFilters.query}`);
     if (activeFilters.district && activeFilters.district !== "Alla") chips.push(`Område: ${activeFilters.district}`);
     if (Array.isArray(activeFilters.type) && activeFilters.type.length > 0) chips.push(`Typ: ${activeFilters.type.join(", ")}`);
     if (activeFilters.teamSize) chips.push(`Platser: ${activeFilters.teamSize}+`);
     if (activeFilters.minSize || activeFilters.maxSize) chips.push(`Yta: ${activeFilters.minSize || 0}-${activeFilters.maxSize || "∞"} kvm`);
+    if (hasExplicitMinBudget || hasExplicitMaxBudget) chips.push(`Budget: ${minBudgetValue || 0}-${maxBudgetValue || "∞"} kr`);
+    if (activeFilters.transitDistance) chips.push(`Kommunaltrafik: ${activeFilters.transitDistance}`);
+    if (activeFilters.moveInDate) chips.push(`Inflytt: ${activeFilters.moveInDate}`);
+    if (activeFilters.contractFlex) chips.push(`Avtal: ${activeFilters.contractFlex}`);
+    if (activeFilters.accessHours) chips.push(`Access: ${activeFilters.accessHours}`);
+    if (activeFilters.parkingType) chips.push(`Parkering: ${activeFilters.parkingType}`);
+    if (activeFilters.layoutType) chips.push(`Planlösning: ${activeFilters.layoutType}`);
+    if (activeFilters.advertiser && activeFilters.advertiser !== "Alla") chips.push(`Annonsör: ${activeFilters.advertiser}`);
+    if (activeFilters.includeOperatingCosts) chips.push("Driftkostnader ingår");
+    if (activeFilters.accessibilityAdapted) chips.push("Tillgänglighetsanpassad");
+    if (activeFilters.ecoCertified) chips.push("Miljöcertifierad");
     if (appliedSearchMeta.amenityQuery) chips.push(`Bekvämlighet: ${appliedSearchMeta.amenityQuery}`);
     if (appliedSearchMeta.furnishedFilter === "yes") chips.push("Möblerad");
     if (appliedSearchMeta.furnishedFilter === "no") chips.push("Ej möblerad");
     return chips;
-  }, [appliedSearchMeta]);
+  }, [appliedSearchMeta, app.defaultFilters?.maxBudget]);
 
   function handleToggleShortlist(listingId) {
     if (isGuest) {
@@ -721,72 +989,35 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
         ) : (
           <div className="space-y-4">
             <div className="px-1 py-1">
+              <Breadcrumbs
+                className="mb-2"
+                items={[
+                  { label: "Startsida", to: "/" },
+                  { label: isAvailableListingsView ? "Lediga lokaler" : "Sökresultat" }
+                ]}
+              />
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <h1 className="text-2xl font-semibold">Sökresultat</h1>
-                <div className="flex flex-wrap items-center gap-2">
-                  <button
-                    type="button"
-                    className="inline-flex items-center gap-1.5 rounded-xl border border-black/15 bg-white px-3 py-2 text-xs font-semibold text-ink-700"
-                    onClick={() => {
-                      if (isGuest) {
-                        openAuthPrompt("save");
-                        return;
-                      }
-                      void saveCurrentFilters(filters);
-                    }}
-                  >
-                    <SaveIcon className="h-3.5 w-3.5" />
-                    Spara sökfilter
-                  </button>
-                  <button
-                    type="button"
-                    className="inline-flex items-center gap-1.5 rounded-xl border border-black/15 bg-white px-3 py-2 text-xs font-semibold text-ink-700"
-                    onClick={() => {
-                      void handleResetSearchResults();
-                    }}
-                  >
-                    <ResetIcon className="h-3.5 w-3.5" />
-                    Nollställ
-                  </button>
-                  <button
-                    type="button"
-                    className="rounded-xl border border-black/15 bg-white px-3 py-2 text-xs font-semibold text-ink-700"
-                    onClick={() => {
-                      setShowSearchEditor((value) => {
-                        const nextValue = !value;
-                        if (nextValue) {
-                          if (editorModeTimerRef.current) {
-                            clearTimeout(editorModeTimerRef.current);
-                            editorModeTimerRef.current = null;
-                          }
-                          setEditorModeOpacity(1);
-                          setShowAdvancedSearchEditor(true);
-                          setShowEditorAiPanel(false);
-                          setAmenityQuery(appliedSearchMeta.amenityQuery || amenityQuery);
-                          setFurnishedFilter(appliedSearchMeta.furnishedFilter || furnishedFilter);
-                        }
-                        return nextValue;
-                      });
-                    }}
-                  >
-                    {showSearchEditor ? "Stäng" : (useNewSearchCta ? "Ny sökning" : "Ändra sökning")}
-                  </button>
-                </div>
+                <h1 className="text-2xl font-semibold">{isAvailableListingsView ? "Lediga lokaler" : "Sökresultat"}</h1>
               </div>
-              {activeSearchChips.length > 0 ? (
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {activeSearchChips.map((chip) => <span key={chip} className="rounded-full border border-black/15 bg-[#f7f9fc] px-2.5 py-1 text-xs font-semibold text-ink-700">{chip}</span>)}
-                </div>
-              ) : null}
             </div>
 
-            {showSearchEditor ? (
-              <article className="mx-auto w-full rounded-3xl border border-black/10 bg-white p-5 text-ink-900 shadow-[0_20px_60px_rgba(15,25,48,0.12)] sm:p-6">
+            {(showSearchEditor || isAvailableListingsView) ? (
+              <article
+                className={`mx-auto w-full rounded-3xl border border-black/10 bg-white p-5 text-ink-900 sm:p-7 ${
+                  showSearchEditor && !isAvailableListingsView && !isClosingSearchEditor ? "search-editor-expand-in" : ""
+                } ${
+                  (isClosingSearchEditor || isLeavingAvailableView) ? "search-editor-collapse-out" : ""
+                } ${
+                  isAvailableListingsView && isEnteringAvailableView ? "search-editor-expand-in" : ""
+                }`}
+              >
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <h2 className="text-xl font-semibold text-ink-900 sm:text-2xl">Sök lokaler i hela Stockholm</h2>
-                  <div className="inline-flex items-center gap-2 text-xs font-semibold text-ink-700">
-                    <SparklesIcon className="h-3.5 w-3.5 text-[#0f1930]" />
-                    <span>AI-sök</span>
+                  <div className="inline-flex items-center gap-2 rounded-2xl border border-black/10 bg-white px-3 py-2 text-xs font-semibold text-ink-700">
+                    <span className="inline-flex items-center gap-1">
+                      <SparklesIcon className="h-3.5 w-3.5 text-[#0f1930]" />
+                      <span>AI-sök</span>
+                    </span>
                     <PillToggle
                       checked={showEditorAiPanel}
                       onToggle={() => switchEditorSearchMode(!showEditorAiPanel)}
@@ -799,7 +1030,7 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
                 <form className="mt-6 space-y-6" onSubmit={submitEditorSearch}>
                   <div className="transition-opacity duration-200" style={{ opacity: editorModeOpacity }}>
                   {showEditorAiPanel ? (
-                    <div className="space-y-4 rounded-2xl border border-black/10 bg-[#f8fafc] p-5">
+                    <div className="space-y-4 rounded-2xl border border-black/10 p-5">
                       <div className="inline-flex items-center gap-2">
                         <SparklesIcon className="h-3.5 w-3.5 text-[#0f1930]" />
                         <span className="text-xs font-semibold uppercase tracking-wide text-ink-700">AI-sök</span>
@@ -811,7 +1042,14 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
                         className={`${heroInputClass} min-h-28`}
                         placeholder="Exempel: Vi är 15 personer och söker möblerat kontor i Vasastan med mötesrum och budget under 90 000 kr."
                       />
-                      <div className="flex justify-end pt-1">
+                      <div className="flex items-center justify-between pt-1">
+                        <button
+                          type="button"
+                          className="inline-flex items-center gap-2 rounded-2xl border border-black/15 bg-white px-3 py-2 text-xs font-semibold text-ink-700 hover:bg-[#eef3fa]"
+                          onClick={() => setShowEditorAiInfo(true)}
+                        >
+                          Hur fungerar AI-sök?
+                        </button>
                         <button
                           type="submit"
                           className="rounded-2xl border border-[#0f1930] bg-[#0f1930] px-5 py-3 text-sm font-semibold text-white hover:bg-[#16233f]"
@@ -862,7 +1100,7 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
                             </select>
                           </label>
                         </div>
-                        <div className="grid gap-5 sm:grid-cols-3 sm:items-start">
+                        <div className="grid gap-5 sm:grid-cols-[minmax(0,0.9fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,0.9fr)] sm:items-start">
                           <label>
                             <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-ink-700">Team</span>
                             <input
@@ -882,6 +1120,15 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
                             <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-ink-700">Max yta</span>
                             <input value={filters.maxSize} onChange={(event) => setFilters((prev) => ({ ...prev, maxSize: event.target.value }))} className={heroInputClass} placeholder="Max kvm" type="number" min="0" />
                           </label>
+                          <label>
+                            <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-ink-700">Inflyttning</span>
+                            <input
+                              value={filters.moveInDate || ""}
+                              onChange={(event) => setFilters((prev) => ({ ...prev, moveInDate: event.target.value }))}
+                              className={`${heroInputClass} h-[48px] py-0`}
+                              type="date"
+                            />
+                          </label>
                         </div>
                       </div>
 
@@ -892,49 +1139,129 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
                         style={{ gridTemplateRows: showAdvancedSearchEditor ? "1fr" : "0fr" }}
                       >
                         <div className="min-h-0 space-y-5">
-                          <div className="grid gap-5 sm:grid-cols-3 sm:items-start">
+                          <div className="grid gap-5 sm:grid-cols-[minmax(0,320px)_minmax(0,1.4fr)_minmax(0,0.8fr)_minmax(0,0.8fr)] sm:items-start">
                             <div>
                               <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-ink-700">Möblering</span>
-                              <div className="inline-flex h-[48px] w-full items-center gap-1 rounded-2xl border border-black/15 bg-[#f1f4f8] p-1">
-                                {furnishedOptions.map((option) => {
-                                  const active = furnishedFilter === option.value;
-                                  return (
-                                    <button
-                                      key={option.value}
-                                      type="button"
-                                      className={`inline-flex min-w-0 flex-1 items-center justify-center rounded-xl p-2 text-xs font-semibold leading-none transition ${
-                                        active ? "bg-[#0f1930] text-white shadow-[0_1px_2px_rgba(15,25,48,0.22)]" : "text-ink-700 hover:bg-white"
-                                      }`}
-                                      onClick={() => setFurnishedFilter(option.value)}
-                                    >
-                                      {option.label}
-                                    </button>
-                                  );
-                                })}
+                              <FurnishingToggle
+                                options={furnishedOptions}
+                                value={furnishedFilter}
+                                onChange={setFurnishedFilter}
+                              />
+                            </div>
+                            <div>
+                              <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-ink-700">Budget / månad</span>
+                              <div className="grid gap-5 sm:grid-cols-2">
+                                <label>
+                                  <input
+                                    value={String(filters.minBudget ?? "")}
+                                    onChange={(event) => setFilters((prev) => ({ ...prev, minBudget: event.target.value }))}
+                                    className={`${heroInputClass} h-[48px] py-0`}
+                                    placeholder="Min (ex. 25 000)"
+                                    type="number"
+                                    min="0"
+                                  />
+                                </label>
+                                <label>
+                                  <input
+                                    value={String(filters.maxBudget ?? "").trim() === "250000" ? "" : filters.maxBudget}
+                                    onChange={(event) => setFilters((prev) => ({ ...prev, maxBudget: event.target.value }))}
+                                    className={`${heroInputClass} h-[48px] py-0`}
+                                    placeholder="Max (ex. 250000)"
+                                    type="number"
+                                    min="0"
+                                  />
+                                </label>
                               </div>
                             </div>
-
                             <label>
-                              <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-ink-700">Budget min / månad</span>
-                              <input
-                                value={String(filters.minBudget ?? "")}
-                                onChange={(event) => setFilters((prev) => ({ ...prev, minBudget: event.target.value }))}
-                                className={`${heroInputClass} h-[48px] py-0`}
-                                placeholder="Min (ex. 25 000)"
-                                type="number"
-                                min="0"
-                              />
+                              <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-ink-700">Access</span>
+                              <select
+                                value={filters.accessHours || "Alla"}
+                                onChange={(event) => setFilters((prev) => ({ ...prev, accessHours: event.target.value === "Alla" ? "" : event.target.value }))}
+                                className={`${heroSelectClass} h-[48px] py-0`}
+                              >
+                                {accessHoursOptions.map((option) => <option key={option} value={option} className="text-black">{option}</option>)}
+                              </select>
                             </label>
                             <label>
-                              <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-ink-700">Budget max / månad</span>
+                              <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-ink-700">Annonsör</span>
+                              <select
+                                value={filters.advertiser || "Alla"}
+                                onChange={(event) => setFilters((prev) => ({ ...prev, advertiser: event.target.value }))}
+                                className={`${heroSelectClass} h-[48px] py-0`}
+                              >
+                                {advertiserOptions.map((option) => <option key={option} value={option} className="text-black">{option}</option>)}
+                              </select>
+                            </label>
+                          </div>
+
+                          <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_auto_auto_auto] sm:items-end">
+                            <label>
+                              <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-ink-700">Kommunaltrafik</span>
+                              <select
+                                value={filters.transitDistance || "Alla"}
+                                onChange={(event) => setFilters((prev) => ({ ...prev, transitDistance: event.target.value === "Alla" ? "" : event.target.value }))}
+                                className={`${heroSelectClass} h-[48px] py-0`}
+                              >
+                                {transitDistanceOptions.map((option) => <option key={option} value={option} className="text-black">{option}</option>)}
+                              </select>
+                            </label>
+                            <label>
+                              <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-ink-700">Avtalsflex</span>
+                              <select
+                                value={filters.contractFlex || "Alla"}
+                                onChange={(event) => setFilters((prev) => ({ ...prev, contractFlex: event.target.value === "Alla" ? "" : event.target.value }))}
+                                className={`${heroSelectClass} h-[48px] py-0`}
+                              >
+                                {contractFlexOptions.map((option) => <option key={option} value={option} className="text-black">{option}</option>)}
+                              </select>
+                            </label>
+                            <label>
+                              <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-ink-700">Parkering</span>
+                              <select
+                                value={filters.parkingType || "Alla"}
+                                onChange={(event) => setFilters((prev) => ({ ...prev, parkingType: event.target.value === "Alla" ? "" : event.target.value }))}
+                                className={`${heroSelectClass} h-[48px] py-0`}
+                              >
+                                {parkingTypeOptions.map((option) => <option key={option} value={option} className="text-black">{option}</option>)}
+                              </select>
+                            </label>
+                            <label>
+                              <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-ink-700">Planlösning</span>
+                              <select
+                                value={filters.layoutType || "Alla"}
+                                onChange={(event) => setFilters((prev) => ({ ...prev, layoutType: event.target.value === "Alla" ? "" : event.target.value }))}
+                                className={`${heroSelectClass} h-[48px] py-0`}
+                              >
+                                {layoutTypeOptions.map((option) => <option key={option} value={option} className="text-black">{option}</option>)}
+                              </select>
+                            </label>
+                            <label className="inline-flex h-[48px] items-center gap-2 rounded-2xl border border-black/15 bg-[#f7f9fc] px-3 text-xs font-semibold text-ink-700">
                               <input
-                                value={String(filters.maxBudget ?? "").trim() === "250000" ? "" : filters.maxBudget}
-                                onChange={(event) => setFilters((prev) => ({ ...prev, maxBudget: event.target.value }))}
-                                className={`${heroInputClass} h-[48px] py-0`}
-                                placeholder="Max (ex. 250000)"
-                                type="number"
-                                min="0"
+                                type="checkbox"
+                                className="search-flag-checkbox"
+                                checked={Boolean(filters.includeOperatingCosts)}
+                                onChange={(event) => setFilters((prev) => ({ ...prev, includeOperatingCosts: event.target.checked }))}
                               />
+                              Driftkostn. ingår
+                            </label>
+                            <label className="inline-flex h-[48px] items-center gap-2 rounded-2xl border border-black/15 bg-[#f7f9fc] px-3 text-xs font-semibold text-ink-700">
+                              <input
+                                type="checkbox"
+                                className="search-flag-checkbox"
+                                checked={Boolean(filters.accessibilityAdapted)}
+                                onChange={(event) => setFilters((prev) => ({ ...prev, accessibilityAdapted: event.target.checked }))}
+                              />
+                              Tillgänglighetsanp.
+                            </label>
+                            <label className="inline-flex h-[48px] items-center gap-2 rounded-2xl border border-black/15 bg-[#f7f9fc] px-3 text-xs font-semibold text-ink-700">
+                              <input
+                                type="checkbox"
+                                className="search-flag-checkbox"
+                                checked={Boolean(filters.ecoCertified)}
+                                onChange={(event) => setFilters((prev) => ({ ...prev, ecoCertified: event.target.checked }))}
+                              />
+                              Miljöcertifierad
                             </label>
                           </div>
 
@@ -953,7 +1280,7 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
                                     }`}
                                     onClick={() => toggleAmenity(option.value)}
                                   >
-                                    <Icon className="h-3.5 w-3.5" />
+                                    <Icon className="h-4 w-4 shrink-0" />
                                     {option.label}
                                   </button>
                                 );
@@ -963,18 +1290,36 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
                         </div>
                       </div>
 
-                      <div className="mt-5 flex items-center justify-end gap-2">
-                        <button
-                          type="button"
-                          className="rounded-2xl border border-black/15 bg-white px-4 py-3 text-sm font-semibold text-ink-700 hover:bg-[#eef3fa]"
-                          onClick={() => setShowSearchEditor(false)}
-                        >
-                          Avbryt
-                        </button>
-                        <button type="submit" className="rounded-2xl border border-[#0f1930] bg-[#0f1930] px-5 py-3 text-sm font-semibold text-white hover:bg-[#16233f]">
-                          Uppdatera sökning
-                        </button>
-                      </div>
+                      {isAvailableListingsView ? (
+                        <div className="mt-5 flex items-center justify-between gap-2">
+                          <button
+                            type="button"
+                            className="inline-flex items-center gap-2 rounded-2xl border border-black/15 bg-white px-3 py-2 text-xs font-semibold text-ink-700 hover:bg-[#eef3fa]"
+                            onClick={() => {
+                              setShowAdvancedSearchEditor((value) => !value);
+                            }}
+                          >
+                            <span>{showAdvancedSearchEditor ? "Visa färre filter" : "Visa alla filter"}</span>
+                            <span aria-hidden="true" className="text-sm leading-none">{showAdvancedSearchEditor ? "−" : "+"}</span>
+                          </button>
+                          <button type="submit" className="rounded-2xl border border-[#0f1930] bg-[#0f1930] px-5 py-3 text-sm font-semibold text-white hover:bg-[#16233f]">
+                            Sök lokaler
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="mt-5 flex items-center justify-end gap-2">
+                          <button
+                            type="button"
+                            className="rounded-2xl border border-black/15 bg-white px-4 py-3 text-sm font-semibold text-ink-700 hover:bg-[#eef3fa]"
+                            onClick={closeSearchEditorSmooth}
+                          >
+                            Avbryt
+                          </button>
+                          <button type="submit" className="rounded-2xl border border-[#0f1930] bg-[#0f1930] px-5 py-3 text-sm font-semibold text-white hover:bg-[#16233f]">
+                            Uppdatera sökning
+                          </button>
+                        </div>
+                      )}
                     </>
                   )}
                   </div>
@@ -983,6 +1328,61 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
             ) : null}
 
             <div className="space-y-4">
+              {!isAvailableListingsView && !showSearchEditor && showSearchSummaryCard ? (
+                <article
+                  className={`rounded-2xl border border-black/10 bg-white p-4 ${
+                    animateSearchSummaryIn ? "search-summary-dissolve-in" : ""
+                  } ${isResettingToAvailable ? "search-summary-dissolve-out" : ""}`}
+                >
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-ink-500">Din sökning</p>
+                      {appliedSearchMeta.aiPrompt ? (
+                        <p className="mt-1 text-sm text-ink-700">{`AI-sök: ${appliedSearchMeta.aiPrompt}`}</p>
+                      ) : null}
+                      {activeSearchChips.length > 0 ? (
+                        <div className="mt-1.5 flex flex-wrap gap-2">
+                          {activeSearchChips.map((chip) => <span key={chip} className="rounded-full border border-black/15 bg-[#f7f9fc] px-2.5 py-1 text-xs font-semibold text-ink-700">{chip}</span>)}
+                        </div>
+                      ) : null}
+                    </div>
+                    <div className="flex flex-wrap items-center justify-end gap-2">
+                      <button
+                        type="button"
+                        className="inline-flex h-[40px] items-center gap-1.5 rounded-xl border border-black/15 bg-white px-3 text-xs font-semibold text-ink-700 hover:bg-[#eef3fa]"
+                        onClick={() => {
+                          if (isGuest) {
+                            openAuthPrompt("save");
+                            return;
+                          }
+                          void saveCurrentFilters(filters);
+                        }}
+                      >
+                        <SaveIcon className="h-3.5 w-3.5" />
+                        Spara sökfilter
+                      </button>
+                      <button
+                        type="button"
+                        className="inline-flex h-[40px] items-center gap-1.5 rounded-xl border border-black/15 bg-white px-3 text-xs font-semibold text-ink-700 hover:bg-[#eef3fa]"
+                        onClick={() => {
+                          void handleResetSearchResults();
+                        }}
+                      >
+                        <ResetIcon className="h-3.5 w-3.5" />
+                        Nollställ
+                      </button>
+                      <button
+                        type="button"
+                        className="inline-flex h-[40px] items-center rounded-xl border border-black/15 bg-white px-3 text-xs font-semibold text-ink-700 hover:bg-[#eef3fa]"
+                        onClick={openExpandedSearchEditor}
+                      >
+                        Redigera sökning
+                      </button>
+                    </div>
+                  </div>
+                </article>
+              ) : null}
+
               {showMap ? (
                 <div className="space-y-2">
                   <GoogleListingsMap listings={visibleListings} onMarkerClick={openListingDetail} dense />
@@ -1000,9 +1400,13 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
                     <span>Karta</span>
                     <PillToggle checked={showMap} onToggle={() => setShowMap((value) => !value)} ariaLabel="Karta" className="h-6 w-10" />
                   </div>
-                  <div className="inline-flex items-center gap-2 rounded-2xl border border-black/10 bg-white px-3 py-2">
+                  <div className="inline-flex items-center gap-2">
                     <label className="text-xs font-semibold text-ink-700">Sortera</label>
-                    <select className="rounded-xl border border-black/15 bg-white px-2 py-1 text-xs font-semibold" value={sortBy} onChange={(event) => setSortBy(event.target.value)}>
+                    <select
+                      className="select-chevron min-h-[40px] min-w-[132px] rounded-xl border border-black/15 bg-white px-4 text-xs font-semibold text-ink-800 focus:border-[#0f1930] focus:outline-none"
+                      value={sortBy}
+                      onChange={(event) => setSortBy(event.target.value)}
+                    >
                       <option value="relevance">Relevans</option>
                       <option value="price_asc">Hyra: lägst först</option>
                       <option value="price_desc">Hyra: högst först</option>
@@ -1023,7 +1427,6 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
                       listing={listing}
                       shortlisted={favoriteIds.has(listing.id)}
                       onOpenListing={openListingDetail}
-                      onBookViewing={handleBookViewing}
                       onToggleShortlist={handleToggleShortlist}
                     />
                   ))}
@@ -1044,6 +1447,29 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
       />
 
       <AuthPromptModal mode={authPromptMode} onClose={() => setAuthPromptMode("")} onRequireAuth={onRequireAuth} />
+
+      {showEditorAiInfo ? (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/45 p-4 backdrop-blur-[2px]" onClick={() => setShowEditorAiInfo(false)}>
+          <div className="relative w-full max-w-lg rounded-2xl border border-black/10 bg-white p-5 shadow-[0_24px_64px_rgba(15,25,48,0.28)]" onClick={(event) => event.stopPropagation()}>
+            <button
+              type="button"
+              className="absolute right-3 top-3 inline-flex h-9 w-9 min-h-9 min-w-9 aspect-square items-center justify-center rounded-full border border-black/15 p-0 text-lg font-semibold leading-none text-ink-700 hover:bg-[#f3f6fb]"
+              onClick={() => setShowEditorAiInfo(false)}
+              aria-label="Stäng"
+            >
+              ×
+            </button>
+            <h3 className="pr-10 text-lg font-semibold text-ink-900">Om AI-sök</h3>
+            <p className="mt-2 text-sm text-ink-700">
+              AI-sök analyserar din text och fyller relevanta filter automatiskt, som område, lokaltyp, teamstorlek,
+              budget och bekvämligheter.
+            </p>
+            <p className="mt-2 text-sm text-ink-700">
+              Skriv gärna tydliga önskemål för bättre resultat, till exempel: <span className="font-semibold">"Möblerat kontor för 10 personer nära tunnelbana med budget under 70 000 kr."</span>
+            </p>
+          </div>
+        </div>
+      ) : null}
     </section>
   );
 }

@@ -125,7 +125,7 @@ function StepProgress({ currentStep }) {
                       ? "bg-[#0d162b] text-white"
                       : complete
                         ? "bg-[#1a2845] text-white"
-                        : "border border-black/15 bg-[#f4f5f7] text-ink-500"
+                        : "border border-black/15 bg-white text-ink-500"
                   }`}
                 >
                   {index + 1}

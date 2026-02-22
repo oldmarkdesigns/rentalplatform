@@ -236,3 +236,131 @@ export function PinIcon({ className }) {
     </IconBase>
   );
 }
+
+export function UploadIcon({ className }) {
+  return (
+    <IconBase className={className}>
+      <path d="M12 4v10" />
+      <path d="M8.5 7.5L12 4l3.5 3.5" />
+      <path d="M4 15.5v3a1.5 1.5 0 0 0 1.5 1.5h13a1.5 1.5 0 0 0 1.5-1.5v-3" />
+    </IconBase>
+  );
+}
+
+export function LightbulbIcon({ className }) {
+  return (
+    <IconBase className={className}>
+      <path d="M12 3.5a5.5 5.5 0 0 0-3.8 9.5c.8.7 1.3 1.5 1.5 2.5h4.6c.2-1 .7-1.8 1.5-2.5A5.5 5.5 0 0 0 12 3.5z" />
+      <path d="M9.5 18h5" />
+      <path d="M10.2 20h3.6" />
+    </IconBase>
+  );
+}
+
+export function ArrowUpIcon({ className }) {
+  return (
+    <IconBase className={className}>
+      <path d="M12 20V6" />
+      <path d="M7.5 10.5L12 6l4.5 4.5" />
+    </IconBase>
+  );
+}
+
+export function MouseScrollIcon({ className }) {
+  return (
+    <IconBase className={className}>
+      <rect x="7" y="3.5" width="10" height="17" rx="5" />
+      <path d="M12 7.5v3.5" />
+    </IconBase>
+  );
+}
+
+export function BalconyIcon({ className }) {
+  return (
+    <IconBase className={className}>
+      <path d="M4 20h16" />
+      <path d="M5.5 20v-5.5a2.5 2.5 0 0 1 2.5-2.5h8a2.5 2.5 0 0 1 2.5 2.5V20" />
+      <path d="M8 12V6h8v6" />
+      <path d="M10 16v4" />
+      <path d="M14 16v4" />
+    </IconBase>
+  );
+}
+
+export function RooftopIcon({ className }) {
+  return (
+    <IconBase className={className}>
+      <path d="M3 10l9-6 9 6" />
+      <path d="M5 10v9h14v-9" />
+      <path d="M8 14h8" />
+      <path d="M10 17h4" />
+    </IconBase>
+  );
+}
+
+export function PenthouseIcon({ className }) {
+  return (
+    <IconBase className={className}>
+      <path d="M4 20V10h16v10" />
+      <path d="M8 10V5h8v5" />
+      <path d="M10 14h4" />
+      <path d="M12 5V3" />
+    </IconBase>
+  );
+}
+
+export function DumbbellIcon({ className }) {
+  return (
+    <IconBase className={className}>
+      <path d="M3 10v4" />
+      <path d="M6 9v6" />
+      <path d="M18 9v6" />
+      <path d="M21 10v4" />
+      <path d="M6 12h12" />
+    </IconBase>
+  );
+}
+
+export function LockerIcon({ className }) {
+  return (
+    <IconBase className={className}>
+      <rect x="5" y="4" width="14" height="16" rx="2" />
+      <path d="M12 4v16" />
+      <path d="M10 10h1" />
+      <path d="M13 14h1" />
+    </IconBase>
+  );
+}
+
+export function SnowflakeIcon({ className }) {
+  return (
+    <IconBase className={className}>
+      <path d="M12 3v18" />
+      <path d="M4.8 7.2l14.4 9.6" />
+      <path d="M19.2 7.2L4.8 16.8" />
+      <path d="M12 3l-2 2" />
+      <path d="M12 3l2 2" />
+      <path d="M12 21l-2-2" />
+      <path d="M12 21l2-2" />
+    </IconBase>
+  );
+}
+
+export function LoungeIcon({ className }) {
+  return (
+    <IconBase className={className}>
+      <path d="M5 14h14a2 2 0 0 1 2 2v2H3v-2a2 2 0 0 1 2-2z" />
+      <path d="M6 14v-3a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v3" />
+      <path d="M14 14v-2.5a1.5 1.5 0 0 1 1.5-1.5h2A1.5 1.5 0 0 1 19 11.5V14" />
+    </IconBase>
+  );
+}
+
+export function ShieldIcon({ className }) {
+  return (
+    <IconBase className={className}>
+      <path d="M12 3l7 3v5c0 4.6-2.8 8.3-7 10-4.2-1.7-7-5.4-7-10V6l7-3z" />
+      <path d="M9.5 12.5l1.8 1.8 3.2-3.2" />
+    </IconBase>
+  );
+}

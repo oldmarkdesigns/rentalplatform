@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import Breadcrumbs from "../../components/layout/Breadcrumbs";
 import { formatSek } from "../../lib/formatters";
 import { navigateTo } from "../../lib/router";
 import { BuildingIcon, ClockIcon, CoinsIcon, PinIcon, RulerIcon, UserIcon } from "../../components/icons/UiIcons";
@@ -35,6 +36,14 @@ function ListingDetailPage({ app, listingId, isGuest = false, onRequireAuth }) {
   return (
     <section className="h-full overflow-y-auto">
       <div className="mx-auto w-full max-w-7xl p-4 pb-8 sm:p-6">
+      <Breadcrumbs
+        className="mb-2"
+        items={[
+          { label: "Startsida", to: "/" },
+          { label: "Sökresultat", to: "/app/rent?run=1" },
+          { label: listing.title }
+        ]}
+      />
       <button type="button" className="rounded-xl border border-black/15 bg-white px-3 py-2 text-xs font-semibold text-ink-700" onClick={() => navigateTo("/app/rent")}>
         Tillbaka till sökresultat
       </button>
@@ -104,6 +113,19 @@ function ListingDetailPage({ app, listingId, isGuest = false, onRequireAuth }) {
               }}
             >
               Kontakta uthyrare
+            </button>
+            <button
+              type="button"
+              className="mt-2 w-full rounded-2xl border border-black/15 bg-white px-4 py-2.5 text-sm font-semibold text-ink-700 hover:bg-[#eef3fa]"
+              onClick={() => {
+                if (isGuest) {
+                  onRequireAuth?.("signup", "renter");
+                  return;
+                }
+                app.pushToast("Visningsförfrågan skickad.", "success");
+              }}
+            >
+              Boka visning
             </button>
           </article>
 
