@@ -6,7 +6,6 @@ import ToastStack from "./components/layout/ToastStack";
 import LandingPage from "./pages/LandingPage";
 import ForgotPasswordPage from "./pages/ForgotPasswordPage";
 import OnboardingPage from "./pages/OnboardingPage";
-import FavoritesPage from "./pages/app/FavoritesPage";
 import LeadsPage from "./pages/app/LeadsPage";
 import ListingDetailPage from "./pages/app/ListingDetailPage";
 import ManageListingPage from "./pages/app/ManageListingPage";
@@ -104,7 +103,7 @@ function AppContent() {
       const rawRoles = Array.isArray(app.user.roles) ? app.user.roles : [role];
       const roleSet = new Set(rawRoles.filter((item) => item === "renter" || item === "publisher"));
       const hasPublisherRole = roleSet.has("publisher");
-      const renterAllowed = ["/app/rent", "/app/favorites", "/app/viewings", "/app/profile", "/app/settings", "/app/listings"];
+      const renterAllowed = ["/app/rent", "/app/viewings", "/app/profile", "/app/settings", "/app/listings"];
       const publisherAllowed = ["/app/my-listings", "/app/publish", "/app/leads", "/app/profile", "/app/settings", "/app/rent", "/app/listings"];
       const extraForPublisherMembers = hasPublisherRole ? ["/app/my-listings", "/app/publish", "/app/leads"] : [];
       const allowedBases = role === "publisher" ? publisherAllowed : [...renterAllowed, ...extraForPublisherMembers];
@@ -112,6 +111,11 @@ function AppContent() {
 
       if (role === "renter" && pathname.startsWith("/app/") && !pathnameAllowed) {
         navigateTo("/app/rent", { replace: true });
+        return;
+      }
+
+      if (pathname === "/app/favorites") {
+        navigateTo("/app/profile?tab=favorites", { replace: true });
         return;
       }
 
@@ -170,7 +174,7 @@ function AppContent() {
   let content = null;
 
   if (pathname === "/") {
-    content = <LandingPage user={app.user} onOpenAuthOverlay={openAuthOverlay} onLogout={app.logout} />;
+    content = <LandingPage user={app.user} listings={app.listings} onOpenAuthOverlay={openAuthOverlay} onLogout={app.logout} />;
   } else if (pathname === "/forgot-password") {
     content = <ForgotPasswordPage />;
   } else if (pathname === "/onboarding") {
@@ -195,7 +199,7 @@ function AppContent() {
           </AppShell>
         );
       } else {
-        content = <LandingPage user={app.user} onOpenAuthOverlay={openAuthOverlay} onLogout={app.logout} />;
+        content = <LandingPage user={app.user} listings={app.listings} onOpenAuthOverlay={openAuthOverlay} onLogout={app.logout} />;
       }
     } else {
     let appRouteContent = null;
@@ -209,14 +213,6 @@ function AppContent() {
       appRouteContent = <ManageListingPage app={app} listingId={managedListingId} />;
     } else if (pathname === "/app/my-listings") {
       appRouteContent = <PublisherOverviewPage app={app} />;
-    } else if (pathname === "/app/favorites") {
-      appRouteContent = (
-        <FavoritesPage
-          app={app}
-          onOpenListing={(listing) => navigateTo(`/app/listings/${encodeURIComponent(listing.id)}`)}
-          onBookViewing={setBookingListing}
-        />
-      );
     } else if (pathname === "/app/viewings") {
       appRouteContent = app.user?.role === "publisher" ? <LeadsPage app={app} /> : <ViewingsPage app={app} />;
     } else if (pathname === "/app/leads") {
@@ -238,7 +234,7 @@ function AppContent() {
       );
     }
   } else {
-    content = <LandingPage user={app.user} onOpenAuthOverlay={openAuthOverlay} onLogout={app.logout} />;
+    content = <LandingPage user={app.user} listings={app.listings} onOpenAuthOverlay={openAuthOverlay} onLogout={app.logout} />;
   }
 
   return (

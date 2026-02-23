@@ -371,6 +371,7 @@ function PublishPage({ app }) {
   const [pending, setPending] = useState(false);
   const [uploadingImages, setUploadingImages] = useState(false);
   const [feedback, setFeedback] = useState("");
+  const [showFaqTips, setShowFaqTips] = useState(false);
   const [duplicateWarning, setDuplicateWarning] = useState(false);
   const [attemptedByStep, setAttemptedByStep] = useState({});
 
@@ -903,16 +904,18 @@ function PublishPage({ app }) {
                 {duplicateWarning ? <p className="rounded-2xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">Liknande annons hittad. Kontrollera rubrik/adress innan publicering.</p> : null}
 
                 <div className="flex flex-wrap items-center justify-between gap-2 border-t border-black/10 pt-4">
-                  <button
-                    type="button"
-                    className="btn-secondary px-4"
-                    onClick={() => setStepIndex((index) => Math.max(0, index - 1))}
-                    disabled={pending || stepIndex === 0}
-                  >
-                    Föregående
-                  </button>
+                  {stepIndex > 0 ? (
+                    <button
+                      type="button"
+                      className="btn-secondary px-4"
+                      onClick={() => setStepIndex((index) => Math.max(0, index - 1))}
+                      disabled={pending}
+                    >
+                      Föregående
+                    </button>
+                  ) : null}
 
-                  <div className="flex flex-wrap gap-2">
+                  <div className="ml-auto flex flex-wrap gap-2">
                     <button type="button" className="btn-secondary px-4" onClick={() => void saveDraft()} disabled={pending || uploadingImages}>
                       <SaveIcon className="mr-1.5 h-4 w-4" />
                       {pending ? "Sparar..." : "Spara utkast"}
@@ -958,28 +961,53 @@ function PublishPage({ app }) {
           </article>
 
             <article className="surface p-4">
-              <h3 className="text-base font-semibold">FAQ och tips</h3>
-              <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                {publishFaqItems.slice(0, 4).map((item) => (
-                  <div key={item.q} className="rounded-xl border border-black/10 bg-white px-3 py-2.5">
-                    <p className="text-xs font-semibold text-ink-900">{item.q}</p>
-                    <p className="mt-1 text-xs text-ink-600">{item.a}</p>
-                  </div>
-                ))}
-                <div className="rounded-xl border border-black/10 bg-white px-3 py-2.5">
-                  <p className="text-xs font-semibold text-ink-900">{publishFaqItems[4].q}</p>
-                  <p className="mt-1 text-xs text-ink-600">{publishFaqItems[4].a}</p>
-                </div>
-                <div className="rounded-xl border border-black/10 bg-[#f8fafc] px-3 py-2.5">
-                  <p className="inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-ink-700">
-                    Snabba tips
-                    <LightbulbIcon className="h-4 w-4 text-[#0f1930]" />
-                  </p>
-                  <ul className="mt-2 space-y-1.5 text-xs text-ink-600">
-                    {publishTips.map((tip) => (
-                      <li key={tip}>{tip}</li>
+              <button
+                type="button"
+                className="flex w-full items-center justify-between text-left"
+                onClick={() => setShowFaqTips((value) => !value)}
+                aria-expanded={showFaqTips}
+                aria-controls="publish-faq-tips-content"
+              >
+                <h3 className="text-base font-semibold">FAQ och tips</h3>
+                <span
+                  aria-hidden="true"
+                  className={`ui-chevron transition-transform duration-200 ${
+                    showFaqTips ? "rotate-180" : ""
+                  }`}
+                />
+              </button>
+
+              <div
+                id="publish-faq-tips-content"
+                className={`grid overflow-hidden transition-[grid-template-rows,opacity,margin] duration-300 ease-out ${
+                  showFaqTips ? "mt-3 opacity-100" : "mt-0 opacity-0"
+                }`}
+                style={{ gridTemplateRows: showFaqTips ? "1fr" : "0fr" }}
+              >
+                <div className="min-h-0">
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {publishFaqItems.slice(0, 4).map((item) => (
+                      <div key={item.q} className="rounded-xl border border-black/10 bg-white px-3 py-2.5">
+                        <p className="text-xs font-semibold text-ink-900">{item.q}</p>
+                        <p className="mt-1 text-xs text-ink-600">{item.a}</p>
+                      </div>
                     ))}
-                  </ul>
+                    <div className="rounded-xl border border-black/10 bg-white px-3 py-2.5">
+                      <p className="text-xs font-semibold text-ink-900">{publishFaqItems[4].q}</p>
+                      <p className="mt-1 text-xs text-ink-600">{publishFaqItems[4].a}</p>
+                    </div>
+                    <div className="rounded-xl border border-black/10 bg-[#f8fafc] px-3 py-2.5">
+                      <p className="inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-ink-700">
+                        Snabba tips
+                        <LightbulbIcon className="h-4 w-4 text-[#0f1930]" />
+                      </p>
+                      <ul className="mt-2 space-y-1.5 text-xs text-ink-600">
+                        {publishTips.map((tip) => (
+                          <li key={tip}>{tip}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
                 </div>
               </div>
             </article>

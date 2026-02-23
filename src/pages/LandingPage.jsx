@@ -3,6 +3,7 @@ import { navigateTo } from "../lib/router";
 import MarketingNavLinks from "../components/layout/MarketingNavLinks";
 import FurnishingToggle from "../components/app/FurnishingToggle";
 import ListingVisualCard from "../components/app/ListingVisualCard";
+import { popularListingFallbackKey } from "../lib/popularListingFallback";
 import {
   BalconyIcon,
   ArrowUpIcon,
@@ -225,8 +226,8 @@ const parkingTypeOptions = ["Alla", "Ingen parkering", "Garage", "Gatuparkering"
 const layoutTypeOptions = ["Alla", "Öppet landskap", "Cellkontor", "Hybrid", "Showroom"];
 const advertiserOptions = ["Alla", "AMF Fastigheter", "Vasakronan", "Castellum", "Fabege", "Skandia Fastigheter"];
 
-const heroInputClass = "w-full rounded-2xl border border-black/15 bg-[#f7f9fc] px-3 py-3 text-sm text-ink-900 placeholder:text-ink-500 focus:border-[#0f1930] focus:outline-none";
-const heroSelectClass = "select-chevron w-full rounded-2xl border border-black/15 bg-[#f7f9fc] px-3 py-3 pr-10 text-sm text-ink-900 focus:border-[#0f1930] focus:outline-none";
+const heroInputClass = "w-full rounded-2xl border border-black/15 bg-transparent px-3 py-3 text-sm text-ink-900 placeholder:text-ink-500 focus:border-[#0f1930] focus:outline-none";
+const heroSelectClass = "select-chevron w-full rounded-2xl border border-black/15 bg-transparent px-3 py-3 pr-10 text-sm text-ink-900 focus:border-[#0f1930] focus:outline-none";
 
 function HeroPillToggle({ checked, onToggle, ariaLabel }) {
   return (
@@ -245,7 +246,16 @@ function HeroPillToggle({ checked, onToggle, ariaLabel }) {
   );
 }
 
-function LandingPage({ user, onOpenAuthOverlay, onLogout }) {
+function normalizeMatchValue(value) {
+  return String(value || "")
+    .toLowerCase()
+    .replace(/[åä]/g, "a")
+    .replace(/ö/g, "o")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+function LandingPage({ user, onOpenAuthOverlay, onLogout, listings = [] }) {
   const headerRef = useRef(null);
   const processLeftRef = useRef(null);
   const processCardRef = useRef(null);
@@ -257,6 +267,7 @@ function LandingPage({ user, onOpenAuthOverlay, onLogout }) {
   const [heroAiPrompt, setHeroAiPrompt] = useState("");
   const [showHeroAiInfo, setShowHeroAiInfo] = useState(false);
   const [showScrollToTopButton, setShowScrollToTopButton] = useState(false);
+  const [isNavScrolled, setIsNavScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const heroModeTimerRef = useRef(null);
   const menuRef = useRef(null);
@@ -415,6 +426,7 @@ function LandingPage({ user, onOpenAuthOverlay, onLogout }) {
   useEffect(() => {
     const onScroll = () => {
       setShowScrollToTopButton(window.scrollY > 12);
+      setIsNavScrolled(window.scrollY > 0);
     };
 
     onScroll();
@@ -449,18 +461,52 @@ function LandingPage({ user, onOpenAuthOverlay, onLogout }) {
   function submitHeroSearch(event) {
     event.preventDefault();
     const params = new URLSearchParams();
+    const queryText = heroFilters.query.trim();
+    const minSize = heroFilters.minSize.trim();
+    const maxSize = heroFilters.maxSize.trim();
+    const teamSize = heroFilters.teamSize.trim();
+    const minBudget = heroFilters.minBudget.trim();
+    const maxBudget = heroFilters.maxBudget.trim();
     const amenityTerms = [...heroFilters.amenities].filter(Boolean).join(" ");
-    const aiPromptCandidate = heroAiPrompt.trim() || heroFilters.query.trim();
+    const aiPromptCandidate = heroAiPrompt.trim() || queryText;
+    const hasAnySearchInput = Boolean(
+      queryText ||
+      heroFilters.district !== "Alla" ||
+      heroFilters.type !== "Alla" ||
+      minSize ||
+      maxSize ||
+      teamSize ||
+      minBudget ||
+      maxBudget ||
+      heroFilters.transitDistance ||
+      heroFilters.moveInDate ||
+      heroFilters.contractFlex ||
+      heroFilters.accessHours ||
+      heroFilters.parkingType ||
+      heroFilters.layoutType ||
+      (heroFilters.advertiser && heroFilters.advertiser !== "Alla") ||
+      heroFilters.includeOperatingCosts ||
+      heroFilters.accessibilityAdapted ||
+      heroFilters.ecoCertified ||
+      amenityTerms ||
+      heroFilters.furnished !== "all" ||
+      (heroAiEnabled && aiPromptCandidate)
+    );
+
+    if (!hasAnySearchInput) {
+      navigateTo("/app/rent?view=available");
+      return;
+    }
 
     params.set("run", "1");
-    if (heroFilters.query.trim()) params.set("query", heroFilters.query.trim());
+    if (queryText) params.set("query", queryText);
     if (heroFilters.district !== "Alla") params.set("district", heroFilters.district);
     if (heroFilters.type !== "Alla") params.set("type", heroFilters.type);
-    if (heroFilters.minSize.trim()) params.set("minSize", heroFilters.minSize.trim());
-    if (heroFilters.maxSize.trim()) params.set("maxSize", heroFilters.maxSize.trim());
-    if (heroFilters.teamSize.trim()) params.set("teamSize", heroFilters.teamSize.trim());
-    if (heroFilters.minBudget.trim()) params.set("minBudget", heroFilters.minBudget.trim());
-    if (heroFilters.maxBudget.trim()) params.set("maxBudget", heroFilters.maxBudget.trim());
+    if (minSize) params.set("minSize", minSize);
+    if (maxSize) params.set("maxSize", maxSize);
+    if (teamSize) params.set("teamSize", teamSize);
+    if (minBudget) params.set("minBudget", minBudget);
+    if (maxBudget) params.set("maxBudget", maxBudget);
     if (heroFilters.transitDistance) params.set("transitDistance", heroFilters.transitDistance);
     if (heroFilters.moveInDate) params.set("moveInDate", heroFilters.moveInDate);
     if (heroFilters.contractFlex) params.set("contractFlex", heroFilters.contractFlex);
@@ -480,9 +526,51 @@ function LandingPage({ user, onOpenAuthOverlay, onLogout }) {
     navigateTo(`/app/rent?${params.toString()}`);
   }
 
+  function openPopularListing(selected) {
+    const queryAddress = normalizeMatchValue(selected?.address || selected?.title);
+    const queryTitle = normalizeMatchValue(selected?.title);
+    const queryDistrict = normalizeMatchValue(selected?.district);
+
+    let matchedListing = Array.isArray(listings)
+      ? listings.find((item) => {
+          const itemAddress = normalizeMatchValue(item?.address);
+          const itemTitle = normalizeMatchValue(item?.title);
+          return (queryAddress && itemAddress === queryAddress) || (queryTitle && itemTitle === queryTitle);
+        })
+      : null;
+
+    if (!matchedListing && Array.isArray(listings)) {
+      matchedListing = listings.find((item) => {
+        const sameDistrict = normalizeMatchValue(item?.district) === queryDistrict;
+        if (!sameDistrict) return false;
+        const itemTitle = normalizeMatchValue(item?.title);
+        const itemAddress = normalizeMatchValue(item?.address);
+        return (queryTitle && itemTitle.includes(queryTitle)) || (queryAddress && itemAddress.includes(queryAddress));
+      });
+    }
+
+    const targetId = matchedListing?.id || selected?.id;
+    if (!targetId) return;
+
+    if (!matchedListing && typeof window !== "undefined") {
+      try {
+        window.sessionStorage.setItem(popularListingFallbackKey(targetId), JSON.stringify(selected));
+      } catch {
+        // no-op: fallback storage is best effort only
+      }
+    }
+
+    navigateTo(`/app/listings/${encodeURIComponent(targetId)}`);
+  }
+
   return (
     <main className="min-h-screen bg-white text-black">
-      <header ref={headerRef} className="navbar-enter sticky top-0 z-40 border-b border-black/10 bg-white/95 backdrop-blur">
+      <header
+        ref={headerRef}
+        className={`navbar-enter fixed inset-x-0 top-0 z-40 border-b will-change-[background-color,border-color,backdrop-filter] transition-[background-color,border-color,backdrop-filter] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+          isNavScrolled ? "border-black/10 bg-white/95 backdrop-blur-md" : "border-black/0 bg-white/0 backdrop-blur-0"
+        }`}
+      >
         <div className="grid w-full grid-cols-[1fr_auto_1fr] items-center gap-4 px-4 py-3 sm:px-6">
           <button type="button" className="justify-self-start text-left" onClick={handleHomeBrandClick}>
             <span className="inline-flex items-center gap-2 rounded-xl border border-black/15 bg-white px-2.5 py-1.5">
@@ -496,7 +584,7 @@ function LandingPage({ user, onOpenAuthOverlay, onLogout }) {
           <nav className="hidden items-center justify-self-center gap-5 lg:flex">
             <MarketingNavLinks
               onSectionLinkClick={handleSectionLinkClick}
-              onPublish={() => (user ? navigateTo("/app/publish") : openAuth("signup", "publisher"))}
+              onPublish={() => (user ? navigateTo("/app/publish") : openAuth("login", "publisher"))}
             />
           </nav>
 
@@ -532,65 +620,9 @@ function LandingPage({ user, onOpenAuthOverlay, onLogout }) {
                       >
                         <span className="inline-flex items-center gap-1.5">
                           <UserIcon className="h-4 w-4" />
-                          Kontoinformation
+                          Profil
                         </span>
                       </button>
-                      <button
-                        type="button"
-                        className="rounded-xl border border-black/15 bg-white px-3 py-2 text-left font-semibold text-ink-700"
-                        onClick={() => {
-                          setMenuOpen(false);
-                          navigateTo("/app/profile#search-history");
-                        }}
-                      >
-                        <span className="inline-flex items-center gap-1.5">
-                          <StarIcon className="h-4 w-4" />
-                          Sökhistorik
-                        </span>
-                      </button>
-                      {activeRole === "renter" ? (
-                        <>
-                          <button
-                            type="button"
-                            className="rounded-xl border border-black/15 bg-white px-3 py-2 text-left font-semibold text-ink-700"
-                            onClick={() => {
-                              setMenuOpen(false);
-                              navigateTo("/app/rent");
-                            }}
-                          >
-                            <span className="inline-flex items-center gap-1.5">
-                              <SearchIcon className="h-4 w-4" />
-                              Sök lokaler
-                            </span>
-                          </button>
-                          <button
-                            type="button"
-                            className="rounded-xl border border-black/15 bg-white px-3 py-2 text-left font-semibold text-ink-700"
-                            onClick={() => {
-                              setMenuOpen(false);
-                              navigateTo("/app/favorites");
-                            }}
-                          >
-                            <span className="inline-flex items-center gap-1.5">
-                              <StarIcon className="h-4 w-4" />
-                              Favoriter
-                            </span>
-                          </button>
-                          <button
-                            type="button"
-                            className="rounded-xl border border-black/15 bg-white px-3 py-2 text-left font-semibold text-ink-700"
-                            onClick={() => {
-                              setMenuOpen(false);
-                              navigateTo("/app/viewings");
-                            }}
-                          >
-                            <span className="inline-flex items-center gap-1.5">
-                              <CalendarIcon className="h-4 w-4" />
-                              Visningar
-                            </span>
-                          </button>
-                        </>
-                      ) : null}
                       {roleSet.has("publisher") ? (
                         <button
                           type="button"
@@ -632,13 +664,6 @@ function LandingPage({ user, onOpenAuthOverlay, onLogout }) {
                   onClick={() => openAuth("login")}
                 >
                   Logga in
-                </button>
-                <button
-                  type="button"
-                  className="rounded-xl border border-[#0f1930] bg-[#0f1930] px-3 py-2 text-xs font-semibold text-white hover:bg-[#16233f]"
-                  onClick={() => openAuth("signup", "renter")}
-                >
-                  Skapa konto
                 </button>
               </>
             )}
@@ -749,44 +774,44 @@ function LandingPage({ user, onOpenAuthOverlay, onLogout }) {
                           </label>
                         </div>
                       ) : (
-                        <>
-                          <div className="space-y-5">
-                            <div className="grid gap-5 sm:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
-                              <label>
-                                <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-ink-700">Sök</span>
-                                <div className="relative">
-                                  <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-500" />
-                                  <input
-                                    value={heroFilters.query}
-                                    onChange={(event) => setHeroFilters((prev) => ({ ...prev, query: event.target.value }))}
-                                    className={`${heroInputClass} pl-10`}
-                                    placeholder="Gata, adress eller fritext"
-                                  />
-                                </div>
-                              </label>
-                              <label>
-                                <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-ink-700">Område</span>
-                                <select
-                                  value={heroFilters.district}
-                                  onChange={(event) => setHeroFilters((prev) => ({ ...prev, district: event.target.value }))}
-                                  className={heroSelectClass}
-                                >
-                                  <option value="Alla" className="text-black">Alla områden</option>
-                                  {districtOptions.map((district) => <option key={district} value={district} className="text-black">{district}</option>)}
-                                </select>
-                              </label>
-                            </div>
-                          <div className="grid gap-5 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-start">
+                        <div className="space-y-5">
+                          <div className="grid gap-5 sm:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+                            <label>
+                              <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-ink-700">Sök</span>
+                              <div className="relative">
+                                <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-500" />
+                                <input
+                                  value={heroFilters.query}
+                                  onChange={(event) => setHeroFilters((prev) => ({ ...prev, query: event.target.value }))}
+                                  className={`${heroInputClass} pl-10`}
+                                  placeholder="Gata, adress eller fritext"
+                                />
+                              </div>
+                            </label>
+                            <label>
+                              <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-ink-700">Område</span>
+                              <select
+                                value={heroFilters.district}
+                                onChange={(event) => setHeroFilters((prev) => ({ ...prev, district: event.target.value }))}
+                                className={heroSelectClass}
+                              >
+                                <option value="Alla" className="text-black">Alla områden</option>
+                                {districtOptions.map((district) => <option key={district} value={district} className="text-black">{district}</option>)}
+                              </select>
+                            </label>
+                          </div>
+
+                          <div className="grid gap-5 sm:grid-cols-[minmax(0,0.8fr)_minmax(0,0.9fr)_minmax(0,0.9fr)_auto] sm:items-end">
                             <label>
                               <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-ink-700">Typ</span>
                               <select
-                                  value={heroFilters.type}
-                                  onChange={(event) => setHeroFilters((prev) => ({ ...prev, type: event.target.value }))}
-                                  className={heroSelectClass}
-                                >
-                                  <option value="Alla" className="text-black">Alla typer</option>
-                                  {listingTypes.map((type) => <option key={type} value={type} className="text-black">{type}</option>)}
-                                </select>
+                                value={heroFilters.type}
+                                onChange={(event) => setHeroFilters((prev) => ({ ...prev, type: event.target.value }))}
+                                className={heroSelectClass}
+                              >
+                                <option value="Alla" className="text-black">Alla typer</option>
+                                {listingTypes.map((type) => <option key={type} value={type} className="text-black">{type}</option>)}
+                              </select>
                             </label>
                             <label>
                               <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-ink-700">Team</span>
@@ -810,12 +835,12 @@ function LandingPage({ user, onOpenAuthOverlay, onLogout }) {
                                 min="0"
                               />
                             </label>
-                              <button type="submit" className="rounded-2xl border border-[#0f1930] bg-[#0f1930] px-5 py-3 text-sm font-semibold text-white hover:bg-[#16233f] sm:self-end">
-                                Sök lokal
-                              </button>
-                            </div>
+                            <button type="submit" className="inline-flex h-[48px] items-center justify-center gap-1.5 rounded-2xl border border-[#0f1930] bg-[#0f1930] px-5 text-sm font-semibold text-white hover:bg-[#16233f]">
+                              <SearchIcon className="h-4 w-4" />
+                              Sök lokal
+                            </button>
                           </div>
-                        </>
+                        </div>
                       )}
 
                       <div
@@ -968,7 +993,7 @@ function LandingPage({ user, onOpenAuthOverlay, onLogout }) {
                                 {layoutTypeOptions.map((option) => <option key={option} value={option} className="text-black">{option}</option>)}
                               </select>
                             </label>
-                            <label className="inline-flex h-[48px] items-center gap-2 rounded-2xl border border-black/15 bg-[#f7f9fc] px-3 text-xs font-semibold text-ink-700">
+                            <label className="inline-flex h-[48px] items-center gap-2 rounded-2xl border border-black/15 bg-white px-3 text-xs font-semibold text-ink-700">
                                 <input
                                   type="checkbox"
                                   className="search-flag-checkbox"
@@ -977,7 +1002,7 @@ function LandingPage({ user, onOpenAuthOverlay, onLogout }) {
                                 />
                               Driftkostn. ingår
                             </label>
-                            <label className="inline-flex h-[48px] items-center gap-2 rounded-2xl border border-black/15 bg-[#f7f9fc] px-3 text-xs font-semibold text-ink-700">
+                            <label className="inline-flex h-[48px] items-center gap-2 rounded-2xl border border-black/15 bg-white px-3 text-xs font-semibold text-ink-700">
                                 <input
                                   type="checkbox"
                                   className="search-flag-checkbox"
@@ -986,7 +1011,7 @@ function LandingPage({ user, onOpenAuthOverlay, onLogout }) {
                                 />
                               Tillgänglighetsanp.
                             </label>
-                            <label className="inline-flex h-[48px] items-center gap-2 rounded-2xl border border-black/15 bg-[#f7f9fc] px-3 text-xs font-semibold text-ink-700">
+                            <label className="inline-flex h-[48px] items-center gap-2 rounded-2xl border border-black/15 bg-white px-3 text-xs font-semibold text-ink-700">
                                 <input
                                   type="checkbox"
                                   className="search-flag-checkbox"
@@ -1027,7 +1052,7 @@ function LandingPage({ user, onOpenAuthOverlay, onLogout }) {
                   )}
 
                   {!heroAiEnabled ? (
-                    <div className={`mt-4 flex items-center ${showAdvancedHeroFilters ? "justify-between" : "justify-start"}`}>
+                    <div className={`mt-4 flex items-center ${showAdvancedHeroFilters ? "justify-between" : "justify-between"} gap-2`}>
                       <button
                         type="button"
                         className="inline-flex items-center gap-2 rounded-xl border border-black/15 bg-white px-3 py-2 text-xs font-semibold text-ink-700 hover:bg-[#eef3fa]"
@@ -1039,7 +1064,8 @@ function LandingPage({ user, onOpenAuthOverlay, onLogout }) {
                         </span>
                       </button>
                       {showAdvancedHeroFilters ? (
-                        <button type="submit" className="rounded-2xl border border-[#0f1930] bg-[#0f1930] px-5 py-3 text-sm font-semibold text-white hover:bg-[#16233f]">
+                        <button type="submit" className="inline-flex items-center gap-1.5 rounded-2xl border border-[#0f1930] bg-[#0f1930] px-5 py-3 text-sm font-semibold text-white hover:bg-[#16233f]">
+                          <SearchIcon className="h-4 w-4" />
                           Sök lokal
                         </button>
                       ) : null}
@@ -1062,7 +1088,7 @@ function LandingPage({ user, onOpenAuthOverlay, onLogout }) {
           <button
             type="button"
             className="rounded-xl border border-[#0f1930] bg-transparent px-4 py-2 text-xs font-semibold text-[#0f1930] hover:bg-[#eef3fa]"
-            onClick={() => navigateTo("/app/rent")}
+            onClick={() => navigateTo("/app/rent?view=available")}
           >
             Se alla lediga lokaler
           </button>
@@ -1070,7 +1096,7 @@ function LandingPage({ user, onOpenAuthOverlay, onLogout }) {
 
         <div className="space-y-6">
           {popularGroups.map((group) => (
-            <article key={group.city} className="rounded-3xl border border-black/10 bg-white p-4 sm:p-5">
+            <article key={group.city}>
               <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
                 <h3 className="text-xl font-semibold text-[#0f1930]">{group.city}</h3>
                 <p className="rounded-full border border-black/10 bg-[#f8fafc] px-3 py-1 text-xs font-semibold text-ink-600">
@@ -1078,13 +1104,13 @@ function LandingPage({ user, onOpenAuthOverlay, onLogout }) {
                 </p>
               </div>
 
-              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                {group.listings.map((listing) => (
+              <div className="grid items-start gap-4 md:grid-cols-2">
+                {group.listings.slice(0, 4).map((listing) => (
                   <ListingVisualCard
                     key={listing.id}
                     listing={listing}
                     shortlisted={false}
-                    onOpenListing={() => navigateTo("/app/rent")}
+                    onOpenListing={openPopularListing}
                     onToggleShortlist={() => {}}
                   />
                 ))}
@@ -1206,14 +1232,14 @@ function LandingPage({ user, onOpenAuthOverlay, onLogout }) {
                 <button
                   type="button"
                   className="rounded-xl border border-black/20 bg-white px-3 py-2 text-xs font-semibold text-ink-700 hover:bg-[#f7f9fc]"
-                  onClick={() => navigateTo("/app/rent")}
+                  onClick={() => navigateTo("/app/rent?view=available")}
                 >
                   Jag vill hyra lokal
                 </button>
                 <button
                   type="button"
                   className="rounded-xl border border-[#0f1930] bg-[#0f1930] px-3 py-2 text-xs font-semibold text-white hover:bg-[#16233f]"
-                  onClick={() => openAuth("signup", "publisher")}
+                  onClick={() => (user ? navigateTo("/app/publish") : openAuth("login"))}
                 >
                   Jag vill publicera lokal
                 </button>
@@ -1413,7 +1439,7 @@ function LandingPage({ user, onOpenAuthOverlay, onLogout }) {
         </div>
       ) : null}
 
-      <footer id="kontakt" className="scroll-mt-24 bg-white">
+      <footer id="kontakt" className="scroll-mt-24 border-t border-black/10 bg-white">
         <div className="mx-auto w-full max-w-[86rem] px-4 py-10 sm:px-6">
           <div className="grid gap-8 lg:grid-cols-[1.15fr_0.95fr_0.95fr_0.95fr]">
             <div className="space-y-4">
@@ -1430,10 +1456,10 @@ function LandingPage({ user, onOpenAuthOverlay, onLogout }) {
                 Lokalflöde Stockholm samlar hyresgäst och annonsör i ett gemensamt flöde för snabbare matchning, visningar och affärer.
               </p>
               <div className="flex flex-wrap gap-2">
-                <button type="button" className="rounded-xl border border-black/20 bg-white px-3 py-2 text-xs font-semibold text-ink-700" onClick={() => navigateTo("/app/rent")}>
+                <button type="button" className="rounded-xl border border-black/20 bg-white px-3 py-2 text-xs font-semibold text-ink-700" onClick={() => navigateTo("/app/rent?view=available")}>
                   Jag vill hyra lokal
                 </button>
-                <button type="button" className="rounded-xl border border-[#0f1930] bg-[#0f1930] px-3 py-2 text-xs font-semibold text-white hover:bg-[#16233f]" onClick={() => openAuth("signup", "publisher")}>
+                <button type="button" className="rounded-xl border border-[#0f1930] bg-[#0f1930] px-3 py-2 text-xs font-semibold text-white hover:bg-[#16233f]" onClick={() => (user ? navigateTo("/app/publish") : openAuth("login"))}>
                   Jag vill publicera lokal
                 </button>
               </div>

@@ -364,3 +364,13 @@ export function ShieldIcon({ className }) {
     </IconBase>
   );
 }
+
+export function ExternalLinkIcon({ className }) {
+  return (
+    <IconBase className={className}>
+      <path d="M14 5h5v5" />
+      <path d="M10 14L19 5" />
+      <path d="M19 13v5a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h5" />
+    </IconBase>
+  );
+}

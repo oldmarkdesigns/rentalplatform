@@ -20,7 +20,7 @@ function MarketingNavLinks({ hrefPrefix = "", onSectionLinkClick, onPublish, onP
           <a
             key={item.label}
             href={item.href}
-            className="text-sm font-semibold text-ink-700 transition hover:text-black"
+            className="text-sm font-semibold text-[#0f1930] transition hover:text-[#0f1930]"
             onClick={(event) => {
               if (onPrimaryNavClick?.(event, item) === true) {
                 return;
@@ -39,7 +39,7 @@ function MarketingNavLinks({ hrefPrefix = "", onSectionLinkClick, onPublish, onP
           <a
             key={item.hash}
             href={href}
-            className="text-sm font-semibold text-ink-700 transition hover:text-black"
+            className="text-sm font-semibold text-[#0f1930] transition hover:text-[#0f1930]"
             onClick={onSectionLinkClick ? (event) => onSectionLinkClick(event, item.hash) : undefined}
           >
             {item.label}

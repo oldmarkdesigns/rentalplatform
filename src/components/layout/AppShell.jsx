@@ -1,14 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { navigateTo, routeMatches } from "../../lib/router";
-import { BuildingIcon, CalendarIcon, HistoryIcon, SearchIcon, StarIcon, UserIcon } from "../icons/UiIcons";
+import { ArrowUpIcon, BuildingIcon, HistoryIcon, MouseScrollIcon, UserIcon } from "../icons/UiIcons";
 import AppFooter from "./AppFooter";
 import MarketingNavLinks from "./MarketingNavLinks";
-
-const renterMenuItems = [
-  { label: "Sök lokaler", path: "/app/rent", icon: SearchIcon },
-  { label: "Favoriter", path: "/app/favorites", icon: StarIcon },
-  { label: "Visningar", path: "/app/viewings", icon: CalendarIcon }
-];
 
 const publisherWorkspaceItems = [
   { label: "Publicera annons", path: "/app/publish" },
@@ -28,8 +22,11 @@ function AppShell({ pathname, user, onSwitchRole, onLogout, onRequireAuth, isGue
   );
   const showPublisherWorkspaceNav = !isGuest && hasPublisherAccess && (activeRole === "publisher" || isPublisherWorkspacePath);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [isNavScrolled, setIsNavScrolled] = useState(false);
+  const [showScrollToTopButton, setShowScrollToTopButton] = useState(false);
   const [showLeaveSearchConfirm, setShowLeaveSearchConfirm] = useState(false);
   const menuRef = useRef(null);
+  const contentRef = useRef(null);
 
   const initials = useMemo(() => {
     const source = (user?.name || (isGuest ? "Gäst" : "AA")).trim();
@@ -55,6 +52,37 @@ function AppShell({ pathname, user, onSwitchRole, onLogout, onRequireAuth, isGue
     setMenuOpen(false);
   }, [pathname]);
 
+  useEffect(() => {
+    const scrollContainer = contentRef.current;
+    const activeScrollable = scrollContainer?.querySelector("section.h-full.overflow-y-auto");
+
+    const handleScroll = () => {
+      const scrollTop = activeScrollable ? activeScrollable.scrollTop : window.scrollY;
+      setIsNavScrolled(scrollTop > 0);
+      setShowScrollToTopButton(scrollTop > 12);
+    };
+
+    handleScroll();
+
+    if (activeScrollable) {
+      activeScrollable.addEventListener("scroll", handleScroll, { passive: true });
+      return () => activeScrollable.removeEventListener("scroll", handleScroll);
+    }
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [pathname]);
+
+  function handleScrollToTop() {
+    const scrollContainer = contentRef.current;
+    const activeScrollable = scrollContainer?.querySelector("section.h-full.overflow-y-auto");
+    if (activeScrollable) {
+      activeScrollable.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
   function handlePrimaryNavClick(event, item) {
     if (!item?.href) return false;
     if (item.href !== "/app/rent?view=available") return false;
@@ -71,7 +99,11 @@ function AppShell({ pathname, user, onSwitchRole, onLogout, onRequireAuth, isGue
 
   return (
     <main className="flex h-screen flex-col overflow-hidden bg-white text-black">
-      <header className="navbar-enter sticky top-0 z-40 shrink-0 border-b border-black/10 bg-white px-4 py-3 sm:px-6">
+      <header
+        className={`navbar-enter sticky top-0 z-40 shrink-0 border-b px-4 py-3 will-change-[background-color,border-color,backdrop-filter] transition-[background-color,border-color,backdrop-filter] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] sm:px-6 ${
+          isNavScrolled ? "border-black/10 bg-white/95 backdrop-blur-md" : "border-black/0 bg-white/0 backdrop-blur-0"
+        }`}
+      >
         <div className="grid w-full grid-cols-[1fr_auto_1fr] items-center gap-3">
           <div className="flex items-center gap-3">
             <button type="button" className="justify-self-start text-left" onClick={() => navigateTo("/")}>
@@ -90,7 +122,7 @@ function AppShell({ pathname, user, onSwitchRole, onLogout, onRequireAuth, isGue
               onPrimaryNavClick={handlePrimaryNavClick}
               onPublish={() => {
                 if (isGuest) {
-                  onRequireAuth?.("signup", "publisher");
+                  onRequireAuth?.("login", "publisher");
                   return;
                 }
                 navigateTo("/app/publish");
@@ -142,33 +174,9 @@ function AppShell({ pathname, user, onSwitchRole, onLogout, onRequireAuth, isGue
                         <button type="button" className="rounded-xl border border-black/15 bg-white px-3 py-2 text-left font-semibold text-ink-700" onClick={() => navigateTo("/app/profile")}>
                           <span className="inline-flex items-center gap-1.5">
                             <UserIcon className="h-4 w-4" />
-                            Kontoinformation
+                            Profil
                           </span>
                         </button>
-                        <button type="button" className="rounded-xl border border-black/15 bg-white px-3 py-2 text-left font-semibold text-ink-700" onClick={() => navigateTo("/app/profile#search-history")}>
-                          <span className="inline-flex items-center gap-1.5">
-                            <HistoryIcon className="h-4 w-4" />
-                            Sökhistorik
-                          </span>
-                        </button>
-                        {activeRole === "renter"
-                          ? renterMenuItems.map((item) => {
-                              const Icon = item.icon;
-                              return (
-                                <button
-                                  key={item.path}
-                                  type="button"
-                                  className="rounded-xl border border-black/15 bg-white px-3 py-2 text-left font-semibold text-ink-700"
-                                  onClick={() => navigateTo(item.path)}
-                                >
-                                  <span className="inline-flex items-center gap-1.5">
-                                    {Icon ? <Icon className="h-4 w-4" /> : null}
-                                    {item.label}
-                                  </span>
-                                </button>
-                              );
-                            })
-                          : null}
                         {roleSet.has("publisher") ? (
                           <button type="button" className="rounded-xl border border-black/15 bg-white px-3 py-2 text-left font-semibold text-ink-700" onClick={() => navigateTo("/app/my-listings")}>
                             <span className="inline-flex items-center gap-1.5">
@@ -206,13 +214,6 @@ function AppShell({ pathname, user, onSwitchRole, onLogout, onRequireAuth, isGue
               >
                 Logga in
               </button>
-              <button
-                type="button"
-                className="rounded-xl border border-[#0f1930] bg-[#0f1930] px-3 py-2 text-xs font-semibold text-white hover:bg-[#16233f]"
-                onClick={() => onRequireAuth?.("signup", "renter")}
-              >
-                Skapa konto
-              </button>
             </div>
           )}
         </div>
@@ -221,7 +222,7 @@ function AppShell({ pathname, user, onSwitchRole, onLogout, onRequireAuth, isGue
 
       {showPublisherWorkspaceNav ? (
         <div className="shrink-0 border-b border-black/10 bg-white px-4 py-2 sm:px-6">
-          <nav className="mx-auto flex w-full max-w-[1240px] flex-wrap items-center justify-center gap-5">
+          <nav className="mx-auto flex w-full max-w-[1240px] flex-wrap items-center justify-start gap-5">
             {publisherWorkspaceItems.map((item) => {
               const active = routeMatches(pathname, item.path);
               return (
@@ -231,7 +232,7 @@ function AppShell({ pathname, user, onSwitchRole, onLogout, onRequireAuth, isGue
                   className={`border-b-2 pb-0.5 text-sm font-semibold transition ${
                     active
                       ? "border-[#0f1930] text-[#0f1930]"
-                      : "border-transparent text-ink-600 hover:text-black"
+                      : "border-transparent text-[#0f1930]/85 hover:text-[#0f1930]"
                   }`}
                   onClick={() => navigateTo(item.path)}
                 >
@@ -243,8 +244,22 @@ function AppShell({ pathname, user, onSwitchRole, onLogout, onRequireAuth, isGue
         </div>
       ) : null}
 
-      <section className="min-h-0 flex-1 overflow-hidden">{children}</section>
+      <section ref={contentRef} className="min-h-0 flex-1 overflow-hidden">{children}</section>
       <AppFooter />
+
+      <button
+        type="button"
+        aria-label="Scrolla till toppen"
+        onClick={handleScrollToTop}
+        className={`fixed bottom-6 right-6 z-30 inline-flex min-h-0 flex-col items-center justify-center gap-0.5 rounded-full border border-black/20 bg-white/25 p-3 text-[#0f1930] shadow-[0_8px_24px_rgba(15,25,48,0.18)] backdrop-blur-md transition-all duration-250 ${
+          showScrollToTopButton
+            ? "pointer-events-auto translate-y-0 opacity-100"
+            : "pointer-events-none translate-y-3 opacity-0"
+        } hover:bg-white/35`}
+      >
+        <ArrowUpIcon className="h-4 w-4" />
+        <MouseScrollIcon className="h-4 w-4" />
+      </button>
 
       {showLeaveSearchConfirm ? (
         <div

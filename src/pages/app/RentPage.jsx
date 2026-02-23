@@ -104,14 +104,21 @@ const amenityAliasesByValue = {
   säkerhetsdörr: ["säkerhetsdörr", "säkerhet", "secure", "security", "säker entré", "säker entre"]
 };
 
-const heroInputClass = "w-full rounded-2xl border border-black/15 bg-[#f7f9fc] px-3 py-3 text-sm text-ink-900 placeholder:text-ink-500 focus:border-[#0f1930] focus:outline-none";
-const heroSelectClass = "select-chevron w-full rounded-2xl border border-black/15 bg-[#f7f9fc] px-3 py-3 pr-10 text-sm text-ink-900 focus:border-[#0f1930] focus:outline-none";
+const heroInputClass = "w-full rounded-2xl border border-black/15 bg-transparent px-3 py-3 text-sm text-ink-900 placeholder:text-ink-500 focus:border-[#0f1930] focus:outline-none";
+const heroSelectClass = "select-chevron w-full rounded-2xl border border-black/15 bg-transparent px-3 py-3 pr-10 text-sm text-ink-900 focus:border-[#0f1930] focus:outline-none";
 
 function parseAmenityTerms(value) {
   return String(value || "")
     .split(",")
     .map((token) => token.trim())
     .filter(Boolean);
+}
+
+function normalizeAmenityTerm(value) {
+  return String(value || "")
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 function hashSeed(value) {
@@ -503,6 +510,7 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
   const availableTransitionTimerRef = useRef(null);
   const availableEnterTimerRef = useRef(null);
   const resetToAvailableTimerRef = useRef(null);
+  const filterExpandedBeforeAiRef = useRef(false);
 
   const favoriteIds = useMemo(() => new Set(favorites.map((entry) => entry.listingId)), [favorites]);
   const listingsById = useMemo(() => new Map(listings.map((item) => [item.id, item])), [listings]);
@@ -657,17 +665,19 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
   }
 
   function isAmenitySelected(value) {
-    const normalizedValue = String(value || "").toLowerCase();
+    const normalizedValue = normalizeAmenityTerm(value);
     const aliases = amenityAliasesByValue[normalizedValue] || [normalizedValue];
-    const selectedTerms = parseAmenityTerms(amenityQuery).map((term) => term.toLowerCase());
-    return selectedTerms.some((term) => aliases.some((alias) => term.includes(alias)));
+    const selectedTerms = parseAmenityTerms(amenityQuery).map(normalizeAmenityTerm);
+    return selectedTerms.some((term) => aliases.some((alias) => term === normalizeAmenityTerm(alias)));
   }
 
   function toggleAmenity(value) {
     const tokens = parseAmenityTerms(amenityQuery);
-    const lowered = String(value).toLowerCase();
-    const hasValue = tokens.some((token) => token.toLowerCase() === lowered);
-    const nextTokens = hasValue ? tokens.filter((token) => token.toLowerCase() !== lowered) : [...tokens, value];
+    const normalizedValue = normalizeAmenityTerm(value);
+    const hasValue = tokens.some((token) => normalizeAmenityTerm(token) === normalizedValue);
+    const nextTokens = hasValue
+      ? tokens.filter((token) => normalizeAmenityTerm(token) !== normalizedValue)
+      : [...tokens, value];
     setAmenityQuery(nextTokens.join(", "));
   }
 
@@ -676,10 +686,13 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
     if (editorModeTimerRef.current) {
       clearTimeout(editorModeTimerRef.current);
     }
+    if (nextAiEnabled) {
+      filterExpandedBeforeAiRef.current = showAdvancedSearchEditor;
+    }
     setEditorModeOpacity(0);
     editorModeTimerRef.current = setTimeout(() => {
       setShowEditorAiPanel(nextAiEnabled);
-      setShowAdvancedSearchEditor(true);
+      setShowAdvancedSearchEditor(nextAiEnabled ? true : filterExpandedBeforeAiRef.current);
       setEditorModeOpacity(1);
       editorModeTimerRef.current = null;
     }, 140);
@@ -1060,77 +1073,151 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
                     </div>
                   ) : (
                     <>
-                      <div className="space-y-5">
-                        <div className="grid gap-5 sm:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_minmax(0,0.55fr)]">
-                          <label>
-                            <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-ink-700">Sök</span>
-                            <div className="relative">
-                              <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-500" />
+                      {showAdvancedSearchEditor ? (
+                        <div className="space-y-5">
+                          <div className="grid gap-5 sm:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_minmax(0,0.55fr)]">
+                            <label>
+                              <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-ink-700">Sök</span>
+                              <div className="relative">
+                                <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-500" />
+                                <input
+                                  value={filters.query}
+                                  onChange={(event) => setFilters((prev) => ({ ...prev, query: event.target.value }))}
+                                  className={`${heroInputClass} pl-10`}
+                                  placeholder="Gata, adress eller fritext"
+                                />
+                              </div>
+                            </label>
+                            <label>
+                              <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-ink-700">Område</span>
+                              <select
+                                value={filters.district}
+                                onChange={(event) => setFilters((prev) => ({ ...prev, district: event.target.value }))}
+                                className={heroSelectClass}
+                              >
+                                <option value="Alla" className="text-black">Alla områden</option>
+                                {districtOptions.map((district) => <option key={district} value={district} className="text-black">{district}</option>)}
+                              </select>
+                            </label>
+                            <label>
+                              <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-ink-700">Typ</span>
+                              <select
+                                value={Array.isArray(filters.type) && filters.type.length > 0 ? filters.type[0] : "Alla"}
+                                onChange={(event) => {
+                                  const nextType = event.target.value;
+                                  setFilters((prev) => ({ ...prev, type: nextType === "Alla" ? [] : [nextType] }));
+                                }}
+                                className={heroSelectClass}
+                              >
+                                <option value="Alla" className="text-black">Alla typer</option>
+                                {listingTypes.map((type) => <option key={type} value={type} className="text-black">{type}</option>)}
+                              </select>
+                            </label>
+                          </div>
+                          <div className="grid gap-5 sm:grid-cols-[minmax(0,0.9fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,0.9fr)] sm:items-start">
+                            <label>
+                              <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-ink-700">Team</span>
                               <input
-                                value={filters.query}
-                                onChange={(event) => setFilters((prev) => ({ ...prev, query: event.target.value }))}
-                                className={`${heroInputClass} pl-10`}
-                                placeholder="Gata, adress eller fritext"
+                                value={filters.teamSize}
+                                onChange={(event) => setFilters((prev) => ({ ...prev, teamSize: event.target.value }))}
+                                className={heroInputClass}
+                                placeholder="Platser"
+                                type="number"
+                                min="1"
                               />
-                            </div>
-                          </label>
-                          <label>
-                            <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-ink-700">Område</span>
-                            <select
-                              value={filters.district}
-                              onChange={(event) => setFilters((prev) => ({ ...prev, district: event.target.value }))}
-                              className={heroSelectClass}
-                            >
-                              <option value="Alla" className="text-black">Alla områden</option>
-                              {districtOptions.map((district) => <option key={district} value={district} className="text-black">{district}</option>)}
-                            </select>
-                          </label>
-                          <label>
-                            <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-ink-700">Typ</span>
-                            <select
-                              value={Array.isArray(filters.type) && filters.type.length > 0 ? filters.type[0] : "Alla"}
-                              onChange={(event) => {
-                                const nextType = event.target.value;
-                                setFilters((prev) => ({ ...prev, type: nextType === "Alla" ? [] : [nextType] }));
-                              }}
-                              className={heroSelectClass}
-                            >
-                              <option value="Alla" className="text-black">Alla typer</option>
-                              {listingTypes.map((type) => <option key={type} value={type} className="text-black">{type}</option>)}
-                            </select>
-                          </label>
+                            </label>
+                            <label>
+                              <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-ink-700">Min yta</span>
+                              <input value={filters.minSize} onChange={(event) => setFilters((prev) => ({ ...prev, minSize: event.target.value }))} className={heroInputClass} placeholder="Min kvm" type="number" min="0" />
+                            </label>
+                            <label>
+                              <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-ink-700">Max yta</span>
+                              <input value={filters.maxSize} onChange={(event) => setFilters((prev) => ({ ...prev, maxSize: event.target.value }))} className={heroInputClass} placeholder="Max kvm" type="number" min="0" />
+                            </label>
+                            <label>
+                              <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-ink-700">Inflyttning</span>
+                              <input
+                                value={filters.moveInDate || ""}
+                                onChange={(event) => setFilters((prev) => ({ ...prev, moveInDate: event.target.value }))}
+                                className={`${heroInputClass} h-[48px] py-0`}
+                                type="date"
+                              />
+                            </label>
+                          </div>
                         </div>
-                        <div className="grid gap-5 sm:grid-cols-[minmax(0,0.9fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,0.9fr)] sm:items-start">
-                          <label>
-                            <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-ink-700">Team</span>
-                            <input
-                              value={filters.teamSize}
-                              onChange={(event) => setFilters((prev) => ({ ...prev, teamSize: event.target.value }))}
-                              className={heroInputClass}
-                              placeholder="Platser"
-                              type="number"
-                              min="1"
-                            />
-                          </label>
-                          <label>
-                            <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-ink-700">Min yta</span>
-                            <input value={filters.minSize} onChange={(event) => setFilters((prev) => ({ ...prev, minSize: event.target.value }))} className={heroInputClass} placeholder="Min kvm" type="number" min="0" />
-                          </label>
-                          <label>
-                            <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-ink-700">Max yta</span>
-                            <input value={filters.maxSize} onChange={(event) => setFilters((prev) => ({ ...prev, maxSize: event.target.value }))} className={heroInputClass} placeholder="Max kvm" type="number" min="0" />
-                          </label>
-                          <label>
-                            <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-ink-700">Inflyttning</span>
-                            <input
-                              value={filters.moveInDate || ""}
-                              onChange={(event) => setFilters((prev) => ({ ...prev, moveInDate: event.target.value }))}
-                              className={`${heroInputClass} h-[48px] py-0`}
-                              type="date"
-                            />
-                          </label>
+                      ) : (
+                        <div className="space-y-5">
+                          <div className="grid gap-5 sm:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_minmax(0,0.55fr)]">
+                            <label>
+                              <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-ink-700">Sök</span>
+                              <div className="relative">
+                                <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-500" />
+                                <input
+                                  value={filters.query}
+                                  onChange={(event) => setFilters((prev) => ({ ...prev, query: event.target.value }))}
+                                  className={`${heroInputClass} pl-10`}
+                                  placeholder="Gata, adress eller fritext"
+                                />
+                              </div>
+                            </label>
+                            <label>
+                              <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-ink-700">Område</span>
+                              <select
+                                value={filters.district}
+                                onChange={(event) => setFilters((prev) => ({ ...prev, district: event.target.value }))}
+                                className={heroSelectClass}
+                              >
+                                <option value="Alla" className="text-black">Alla områden</option>
+                                {districtOptions.map((district) => <option key={district} value={district} className="text-black">{district}</option>)}
+                              </select>
+                            </label>
+                            <label>
+                              <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-ink-700">Typ</span>
+                              <select
+                                value={Array.isArray(filters.type) && filters.type.length > 0 ? filters.type[0] : "Alla"}
+                                onChange={(event) => {
+                                  const nextType = event.target.value;
+                                  setFilters((prev) => ({ ...prev, type: nextType === "Alla" ? [] : [nextType] }));
+                                }}
+                                className={heroSelectClass}
+                              >
+                                <option value="Alla" className="text-black">Alla typer</option>
+                                {listingTypes.map((type) => <option key={type} value={type} className="text-black">{type}</option>)}
+                              </select>
+                            </label>
+                          </div>
+                          <div className="grid gap-5 sm:grid-cols-[minmax(0,0.9fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,0.9fr)] sm:items-start">
+                            <label>
+                              <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-ink-700">Team</span>
+                              <input
+                                value={filters.teamSize}
+                                onChange={(event) => setFilters((prev) => ({ ...prev, teamSize: event.target.value }))}
+                                className={heroInputClass}
+                                placeholder="Platser"
+                                type="number"
+                                min="1"
+                              />
+                            </label>
+                            <label>
+                              <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-ink-700">Min yta</span>
+                              <input value={filters.minSize} onChange={(event) => setFilters((prev) => ({ ...prev, minSize: event.target.value }))} className={heroInputClass} placeholder="Min kvm" type="number" min="0" />
+                            </label>
+                            <label>
+                              <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-ink-700">Max yta</span>
+                              <input value={filters.maxSize} onChange={(event) => setFilters((prev) => ({ ...prev, maxSize: event.target.value }))} className={heroInputClass} placeholder="Max kvm" type="number" min="0" />
+                            </label>
+                            <label>
+                              <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-ink-700">Inflyttning</span>
+                              <input
+                                value={filters.moveInDate || ""}
+                                onChange={(event) => setFilters((prev) => ({ ...prev, moveInDate: event.target.value }))}
+                                className={`${heroInputClass} h-[48px] py-0`}
+                                type="date"
+                              />
+                            </label>
+                          </div>
                         </div>
-                      </div>
+                      )}
 
                       <div
                         className={`grid overflow-hidden transition-[grid-template-rows,opacity,margin] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${
@@ -1236,7 +1323,7 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
                                 {layoutTypeOptions.map((option) => <option key={option} value={option} className="text-black">{option}</option>)}
                               </select>
                             </label>
-                            <label className="inline-flex h-[48px] items-center gap-2 rounded-2xl border border-black/15 bg-[#f7f9fc] px-3 text-xs font-semibold text-ink-700">
+                            <label className="inline-flex h-[48px] items-center gap-2 rounded-2xl border border-black/15 bg-white px-3 text-xs font-semibold text-ink-700">
                               <input
                                 type="checkbox"
                                 className="search-flag-checkbox"
@@ -1245,7 +1332,7 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
                               />
                               Driftkostn. ingår
                             </label>
-                            <label className="inline-flex h-[48px] items-center gap-2 rounded-2xl border border-black/15 bg-[#f7f9fc] px-3 text-xs font-semibold text-ink-700">
+                            <label className="inline-flex h-[48px] items-center gap-2 rounded-2xl border border-black/15 bg-white px-3 text-xs font-semibold text-ink-700">
                               <input
                                 type="checkbox"
                                 className="search-flag-checkbox"
@@ -1254,7 +1341,7 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
                               />
                               Tillgänglighetsanp.
                             </label>
-                            <label className="inline-flex h-[48px] items-center gap-2 rounded-2xl border border-black/15 bg-[#f7f9fc] px-3 text-xs font-semibold text-ink-700">
+                            <label className="inline-flex h-[48px] items-center gap-2 rounded-2xl border border-black/15 bg-white px-3 text-xs font-semibold text-ink-700">
                               <input
                                 type="checkbox"
                                 className="search-flag-checkbox"
@@ -1302,7 +1389,8 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
                             <span>{showAdvancedSearchEditor ? "Visa färre filter" : "Visa alla filter"}</span>
                             <span aria-hidden="true" className="text-sm leading-none">{showAdvancedSearchEditor ? "−" : "+"}</span>
                           </button>
-                          <button type="submit" className="rounded-2xl border border-[#0f1930] bg-[#0f1930] px-5 py-3 text-sm font-semibold text-white hover:bg-[#16233f]">
+                          <button type="submit" className="inline-flex items-center gap-1.5 rounded-2xl border border-[#0f1930] bg-[#0f1930] px-5 py-3 text-sm font-semibold text-white hover:bg-[#16233f]">
+                            <SearchIcon className="h-4 w-4" />
                             Sök lokaler
                           </button>
                         </div>
@@ -1324,7 +1412,7 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
                   )}
                   </div>
                 </form>
-              </article>
+                </article>
             ) : null}
 
             <div className="space-y-4">
@@ -1355,11 +1443,20 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
                             openAuthPrompt("save");
                             return;
                           }
-                          void saveCurrentFilters(filters);
+                          const activePrompt = String(appliedSearchMeta.aiPrompt || "").trim();
+                          const baseFilters = appliedSearchMeta.filters || filters;
+                          if (activePrompt) {
+                            saveAiSearch({
+                              prompt: activePrompt,
+                              filters: baseFilters
+                            });
+                            return;
+                          }
+                          void saveCurrentFilters(baseFilters);
                         }}
                       >
                         <SaveIcon className="h-3.5 w-3.5" />
-                        Spara sökfilter
+                        {appliedSearchMeta.aiPrompt ? "Spara AI-sökning" : "Spara sökfilter"}
                       </button>
                       <button
                         type="button"
@@ -1396,10 +1493,24 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
                   {visibleListings.length} träffar
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="inline-flex items-center gap-2 text-xs font-semibold text-ink-700">
+                  <button
+                    type="button"
+                    className="inline-flex min-h-[40px] items-center gap-2 rounded-xl border border-black/15 bg-white px-3 text-xs font-semibold text-ink-700 hover:bg-[#f7f9fc]"
+                    onClick={() => setShowMap((value) => !value)}
+                    aria-pressed={showMap}
+                    aria-label="Visa karta"
+                  >
+                    <MapIcon className="h-3.5 w-3.5 text-ink-700" />
                     <span>Karta</span>
-                    <PillToggle checked={showMap} onToggle={() => setShowMap((value) => !value)} ariaLabel="Karta" className="h-6 w-10" />
-                  </div>
+                    <span
+                      aria-hidden="true"
+                      className={`inline-flex h-6 w-10 items-center rounded-full p-0.5 transition-colors ${
+                        showMap ? "justify-end bg-[#0f1930]" : "justify-start bg-[#a8adb3]"
+                      }`}
+                    >
+                      <span className="h-5 w-5 rounded-full bg-white shadow-[0_1px_2px_rgba(15,25,48,0.35)]" />
+                    </span>
+                  </button>
                   <div className="inline-flex items-center gap-2">
                     <label className="text-xs font-semibold text-ink-700">Sortera</label>
                     <select
@@ -1420,7 +1531,7 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
               {visibleListings.length === 0 ? (
                 <div className="rounded-3xl border border-black/10 bg-white p-10 text-center text-sm text-ink-500">Inga objekt matchar din sökning just nu.</div>
               ) : (
-                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                <div className="grid items-start gap-4 lg:grid-cols-2">
                   {visibleListings.map((listing) => (
                     <ListingVisualCard
                       key={listing.id}
