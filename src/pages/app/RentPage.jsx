@@ -1640,13 +1640,21 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
     const nextFilters = suggestion.nextFilters || filters;
     const nextAmenityQuery = typeof suggestion.nextAmenityQuery === "string" ? suggestion.nextAmenityQuery : amenityQuery;
     const nextFurnishedFilter = suggestion.nextFurnishedFilter || furnishedFilter;
+    const nextAiPrompt = String(appliedSearchMeta.aiPrompt || "").trim();
     setFilters(nextFilters);
     setAmenityQuery(nextAmenityQuery);
     setFurnishedFilter(nextFurnishedFilter);
+    setAiLivePreview({
+      filters: nextFilters,
+      amenityQuery: nextAmenityQuery,
+      furnishedFilter: nextFurnishedFilter,
+      aiPrompt: nextAiPrompt,
+      matchCount: Number.isFinite(suggestion.count) ? suggestion.count : null
+    });
     await executeSearch(nextFilters, {
       amenityQuery: nextAmenityQuery,
       furnishedFilter: nextFurnishedFilter,
-      aiPrompt: String(appliedSearchMeta.aiPrompt || "").trim(),
+      aiPrompt: nextAiPrompt,
       aiSuggestionLabel: `AI-förslag: ${suggestion.label}`
     });
     setAiGuideResetKey((value) => value + 1);
