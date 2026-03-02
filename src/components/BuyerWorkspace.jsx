@@ -138,13 +138,13 @@ function BuyerWorkspace({
         </section>
 
         <section className="surface p-6 sm:p-7">
-          <p className="inline-flex rounded-full border border-ink-200 bg-ink-50 px-3 py-1 text-xs font-semibold text-ink-600">Vilka vi är</p>
+          <p className="inline-flex rounded-full border border-ink-200 bg-white px-3 py-1 text-xs font-semibold text-ink-600">Vilka vi är</p>
           <h2 className="mt-3 max-w-4xl font-display text-3xl font-semibold leading-tight text-ink-900">
             En tillitsdriven plattform för snabbare lokalaffärer. Tydlig data, enkel process och mindre manuellt arbete.
           </h2>
 
           <div className="mt-6 grid gap-3 sm:grid-cols-3">
-            <article className="sm:col-span-2 rounded-3xl border border-ink-100 bg-ink-50 p-3">
+            <article className="sm:col-span-2 rounded-3xl border border-ink-100 bg-white p-3">
               <img src="/mock/listing-2.svg" alt="Möte" className="h-52 w-full rounded-2xl object-cover" />
               <div className="mt-3 grid gap-2 sm:grid-cols-2">
                 <div className="rounded-2xl bg-white p-3">
@@ -161,7 +161,7 @@ function BuyerWorkspace({
             <article className="rounded-3xl border border-ink-100 bg-white p-4">
               <p className="text-3xl font-semibold text-ink-900">1 200+</p>
               <p className="text-sm text-ink-600">Kvalificerade intressen i testdata</p>
-              <div className="mt-6 rounded-2xl bg-ink-50 p-3">
+              <div className="mt-6 rounded-2xl bg-white p-3">
                 <p className="text-2xl font-semibold text-ink-900">250+</p>
                 <p className="text-sm text-ink-600">Team som hittat ny lokal via flödet</p>
               </div>
@@ -285,7 +285,7 @@ function BuyerWorkspace({
 
               <div className="mt-4 grid gap-3 md:grid-cols-2">
                 {featuredListings.slice(0, 2).map((listing) => (
-                  <article key={listing.id} className="rounded-2xl border border-ink-100 bg-ink-50 p-3">
+                  <article key={listing.id} className="rounded-2xl border border-ink-100 bg-white p-3">
                     <div className="flex items-start gap-3">
                       <img src={listing.image} alt={listing.title} className="h-24 w-28 rounded-xl object-cover" />
                       <div className="min-w-0 flex-1">
@@ -339,15 +339,15 @@ function BuyerWorkspace({
         <section className="surface p-4">
           <h4 className="font-display text-xl font-semibold text-ink-900">Hyr, jämför och ansök</h4>
           <div className="mt-3 space-y-2">
-            <article className="rounded-2xl border border-ink-100 bg-ink-50 p-3">
+            <article className="rounded-2xl border border-ink-100 bg-white p-3">
               <p className="text-sm font-semibold text-ink-900">1. Hyr lokal</p>
               <p className="text-xs text-ink-600">Sök direkt bland verifierade lokaler.</p>
             </article>
-            <article className="rounded-2xl border border-ink-100 bg-ink-50 p-3">
+            <article className="rounded-2xl border border-ink-100 bg-white p-3">
               <p className="text-sm font-semibold text-ink-900">2. Jämför alternativ</p>
-              <p className="text-xs text-ink-600">Använd AI-sök eller favoriter för snabb jämförelse.</p>
+              <p className="text-xs text-ink-600">Använd AI-sök eller sparade objekt för snabb jämförelse.</p>
             </article>
-            <article className="rounded-2xl border border-ink-100 bg-ink-50 p-3">
+            <article className="rounded-2xl border border-ink-100 bg-white p-3">
               <p className="text-sm font-semibold text-ink-900">3. Skicka förfrågan</p>
               <p className="text-xs text-ink-600">Boka visning och fortsätt till offert med annonsören.</p>
             </article>
@@ -367,11 +367,11 @@ function BuyerWorkspace({
         </section>
 
         <section className="surface p-4">
-          <p className="font-display text-lg font-semibold text-ink-900">Favoriter</p>
+          <p className="font-display text-lg font-semibold text-ink-900">Sparade objekt</p>
           <p className="mt-1 text-xs text-ink-600">Sparade lokaler för snabb återkomst.</p>
           <div className="mt-3 space-y-2">
             {shortlist.length === 0 ? (
-              <div className="rounded-xl border border-dashed border-ink-200 bg-ink-50 px-3 py-4 text-center text-sm text-ink-500">
+              <div className="rounded-xl border border-dashed border-ink-200 bg-white px-3 py-4 text-center text-sm text-ink-500">
                 Inga sparade lokaler ännu.
               </div>
             ) : (

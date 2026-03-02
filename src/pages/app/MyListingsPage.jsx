@@ -101,7 +101,7 @@ function getFirstIncompleteCreateStep(draft) {
 
 function StepProgress({ currentStep }) {
   return (
-    <div className="mt-5 rounded-3xl border border-black/10 bg-gradient-to-br from-[#f8fafc] to-white p-3">
+    <div className="mt-5 rounded-3xl border border-black/10 bg-gradient-to-br from-white to-white p-3">
       <div className="grid grid-cols-4 gap-2">
         {createSteps.map((label, index) => {
           const active = index === currentStep;
@@ -114,7 +114,7 @@ function StepProgress({ currentStep }) {
                 active
                   ? "border-[#0d162b]/30 bg-white"
                   : complete
-                    ? "border-[#0d162b]/20 bg-[#f6f8fc]"
+                    ? "border-[#0d162b]/20 bg-white"
                     : "border-black/10 bg-white/70"
               }`}
             >
@@ -163,7 +163,7 @@ function ListingPreview({ draft }) {
         <div className="flex flex-wrap gap-2">
           {amenities.length === 0 ? <span className="text-xs text-ink-500">Lägg till faciliteter för att förbättra annonsen.</span> : null}
           {amenities.slice(0, 6).map((amenity) => (
-            <span key={amenity} className="rounded-full border border-black/10 bg-[#f8fafc] px-2 py-1 text-[11px] font-semibold text-ink-700">{amenity}</span>
+            <span key={amenity} className="rounded-full border border-black/10 bg-white px-2 py-1 text-[11px] font-semibold text-ink-700">{amenity}</span>
           ))}
         </div>
       </div>
@@ -173,7 +173,7 @@ function ListingPreview({ draft }) {
 
 function PublishReview({ draft, onEdit, onApproveAndPublish, pending }) {
   return (
-    <div className="mt-6 space-y-4 rounded-2xl border border-black/10 bg-[#f8fafc] p-4">
+    <div className="mt-6 space-y-4 rounded-2xl border border-black/10 bg-white p-4">
       <div className="rounded-2xl border border-black/10 bg-white px-3 py-2 text-sm font-semibold text-ink-700">
         Kontrollera annonsen innan publicering.
       </div>
@@ -478,7 +478,7 @@ function MyListingsPage({ app }) {
 
           <div className="grid gap-4 xl:grid-cols-[1.05fr_0.95fr]">
             <div className="space-y-3 rounded-3xl border border-black/10 bg-white p-4">
-              <div className="rounded-2xl border border-black/10 bg-[#f8fafc] p-3">
+              <div className="rounded-2xl border border-black/10 bg-white p-3">
                 <p className="text-xs font-semibold uppercase tracking-wide text-ink-500">1. Grund</p>
                 <div className="mt-2 space-y-3">
                   <input className="field" value={draft.title} onChange={(event) => setDraft((prev) => ({ ...prev, title: event.target.value }))} placeholder="Rubrik" />
@@ -498,7 +498,7 @@ function MyListingsPage({ app }) {
                 </div>
               </div>
 
-              <div className="rounded-2xl border border-black/10 bg-[#f8fafc] p-3">
+              <div className="rounded-2xl border border-black/10 bg-white p-3">
                 <p className="text-xs font-semibold uppercase tracking-wide text-ink-500">2. Villkor</p>
                 <div className="mt-2 space-y-3">
                   <div className="grid gap-3 sm:grid-cols-2">
@@ -524,7 +524,7 @@ function MyListingsPage({ app }) {
                 </div>
               </div>
 
-              <div className="rounded-2xl border border-black/10 bg-[#f8fafc] p-3">
+              <div className="rounded-2xl border border-black/10 bg-white p-3">
                 <p className="text-xs font-semibold uppercase tracking-wide text-ink-500">3. Media</p>
                 <div className="mt-2 space-y-3">
                   <input className="field" value={draft.image} onChange={(event) => setDraft((prev) => ({ ...prev, image: event.target.value }))} placeholder="Sökväg till omslagsbild" />
@@ -546,7 +546,7 @@ function MyListingsPage({ app }) {
               </div>
             </div>
 
-            <div className="space-y-2 rounded-3xl border border-black/10 bg-[#f8fafc] p-4">
+            <div className="space-y-2 rounded-3xl border border-black/10 bg-white p-4">
               <p className="text-xs font-semibold uppercase tracking-wide text-ink-500">Förhandsvisning för hyresgäst</p>
               <ListingPreview draft={draft} />
             </div>
@@ -611,7 +611,7 @@ function MyListingsPage({ app }) {
                 onViewListing={() => navigateTo("/app/my-listings")}
               />
             ) : (
-              <div className="mt-6 space-y-4 rounded-3xl border border-black/10 bg-[#f8fafc] p-4">
+              <div className="mt-6 space-y-4 rounded-3xl border border-black/10 bg-white p-4">
                 {createStep === 0 ? (
                   <div className="space-y-3">
                     <input className={createFieldClass(0, "title")} value={createDraft.title} onChange={(event) => setCreateDraft((prev) => ({ ...prev, title: event.target.value }))} placeholder="Rubrik" />
@@ -752,7 +752,7 @@ function MyListingsPage({ app }) {
               {sortedOwnListings.map((listing) => (
                 <article key={listing.id} className="rounded-3xl border border-black/10 bg-white p-3">
                   <div className="flex items-start gap-3">
-                    <div className="w-28 shrink-0 rounded-2xl border border-black/10 bg-[#f8fafc] p-1.5">
+                    <div className="w-28 shrink-0 rounded-2xl border border-black/10 bg-white p-1.5">
                       <img src={listing.image || "/object-images/object-1.jpeg"} alt={listing.title} className="h-24 w-full rounded-xl object-cover" />
                     </div>
 

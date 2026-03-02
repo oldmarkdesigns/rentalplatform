@@ -45,19 +45,19 @@ function ListingModal({ listing, onClose, onToggleShortlist, shortlisted, onBook
             </div>
 
             <div className="grid grid-cols-2 gap-2 text-sm text-ink-700">
-              <div className="rounded-2xl border border-black/5 bg-ink-50 px-3 py-2">
+              <div className="rounded-2xl border border-black/5 bg-white px-3 py-2">
                 <p className="text-xs text-ink-500">Månadshyra</p>
                 <p className="font-semibold text-ink-900">{formatSek(listing.priceMonthly)}</p>
               </div>
-              <div className="rounded-2xl border border-black/5 bg-ink-50 px-3 py-2">
+              <div className="rounded-2xl border border-black/5 bg-white px-3 py-2">
                 <p className="text-xs text-ink-500">Yta</p>
                 <p className="font-semibold text-ink-900">{listing.sizeSqm} kvm</p>
               </div>
-              <div className="rounded-2xl border border-black/5 bg-ink-50 px-3 py-2">
+              <div className="rounded-2xl border border-black/5 bg-white px-3 py-2">
                 <p className="text-xs text-ink-500">Kapacitet</p>
                 <p className="font-semibold text-ink-900">{listing.capacity} platser</p>
               </div>
-              <div className="rounded-2xl border border-black/5 bg-ink-50 px-3 py-2">
+              <div className="rounded-2xl border border-black/5 bg-white px-3 py-2">
                 <p className="text-xs text-ink-500">Tillgänglighet</p>
                 <p className="font-semibold text-ink-900">{listing.availability}</p>
               </div>
@@ -86,7 +86,7 @@ function ListingModal({ listing, onClose, onToggleShortlist, shortlisted, onBook
                 Boka visning
               </button>
               <button type="button" onClick={() => onToggleShortlist(listing)} className="btn-secondary">
-                {shortlisted ? "Ta bort favorit" : "Spara favorit"}
+                {shortlisted ? "Ta bort sparat objekt" : "Spara objekt"}
               </button>
             </div>
           </div>

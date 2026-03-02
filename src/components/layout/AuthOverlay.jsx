@@ -114,7 +114,7 @@ function AuthOverlay({ open, mode = "login", preferredRole = "renter", onClose, 
             <button type="submit" className="btn-primary w-full" disabled={pending}>
               {pending ? "Loggar in..." : "Logga in"}
             </button>
-            <div className="rounded-2xl border border-black/10 bg-[#f8fafc] p-3 text-xs text-ink-600">
+            <div className="rounded-2xl border border-black/10 bg-white p-3 text-xs text-ink-600">
               Demo-konton:
               <br />
               Hyresgäst: hyresgast@demo.se / demo123
@@ -139,7 +139,7 @@ function AuthOverlay({ open, mode = "login", preferredRole = "renter", onClose, 
                 onClick={() => setRoleSelection("renter")}
                 className={`inline-flex items-center gap-2 rounded-2xl border px-3 py-2 text-sm font-semibold ${
                   signupForm.roles.length === 1 && signupForm.roles[0] === "renter"
-                    ? "border-[#0f1930] bg-[#eef3fb] text-[#0f1930]"
+                    ? "border-[#0f1930] bg-white text-[#0f1930]"
                     : "border-black/20 bg-white text-ink-700"
                 }`}
               >
@@ -155,7 +155,7 @@ function AuthOverlay({ open, mode = "login", preferredRole = "renter", onClose, 
                 onClick={() => setRoleSelection("publisher")}
                 className={`inline-flex items-center gap-2 rounded-2xl border px-3 py-2 text-sm font-semibold ${
                   signupForm.roles.length === 1 && signupForm.roles[0] === "publisher"
-                    ? "border-[#0f1930] bg-[#eef3fb] text-[#0f1930]"
+                    ? "border-[#0f1930] bg-white text-[#0f1930]"
                     : "border-black/20 bg-white text-ink-700"
                 }`}
               >
@@ -171,7 +171,7 @@ function AuthOverlay({ open, mode = "login", preferredRole = "renter", onClose, 
                 onClick={() => setRoleSelection("both")}
                 className={`inline-flex items-center gap-2 rounded-2xl border px-3 py-2 text-sm font-semibold ${
                   signupForm.roles.length === 2
-                    ? "border-[#0f1930] bg-[#eef3fb] text-[#0f1930]"
+                    ? "border-[#0f1930] bg-white text-[#0f1930]"
                     : "border-black/20 bg-white text-ink-700"
                 }`}
               >

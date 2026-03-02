@@ -108,7 +108,7 @@ function AppShell({ pathname, user, onSwitchRole, onLogout, onRequireAuth, isGue
           <div className="flex items-center gap-3">
             <button type="button" className="justify-self-start text-left" onClick={() => navigateTo("/")}>
               <span className="inline-flex items-center gap-2 rounded-xl border border-black/15 bg-white px-2.5 py-1.5">
-                <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-dashed border-black/30 bg-[#f8fafc] text-[9px] font-semibold uppercase tracking-wide text-ink-500">
+                <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-dashed border-black/30 bg-white text-[9px] font-semibold uppercase tracking-wide text-ink-500">
                   LOGGA
                 </span>
                 <span className="text-sm font-semibold text-ink-800">Företagsnamn</span>
@@ -145,7 +145,7 @@ function AppShell({ pathname, user, onSwitchRole, onLogout, onRequireAuth, isGue
 
               {menuOpen ? (
                 <div className="absolute right-0 top-[calc(100%+8px)] z-30 w-72 rounded-2xl border border-black/10 bg-white p-3">
-                  <div className="rounded-xl border border-black/10 bg-[#f8fafc] px-3 py-2">
+                  <div className="rounded-xl border border-black/10 bg-white px-3 py-2">
                     <p className="text-sm font-semibold text-black">{isGuest ? "Gästläge" : (user?.name || "Användare")}</p>
                     <p className="text-xs text-ink-600">{isGuest ? "Logga in för att spara och boka visning" : (user?.email || "-")}</p>
                     {!isGuest ? <p className="mt-1 text-xs text-ink-500">Roll: {activeRole === "publisher" ? "Annonsör" : "Hyresgäst"}</p> : null}
@@ -209,7 +209,7 @@ function AppShell({ pathname, user, onSwitchRole, onLogout, onRequireAuth, isGue
             <div className="flex items-center justify-self-end gap-2">
               <button
                 type="button"
-                className="rounded-xl border border-black/15 bg-white px-3 py-2 text-xs font-semibold text-ink-700 hover:bg-[#f7f9fc]"
+                className="rounded-xl border border-black/15 bg-white px-3 py-2 text-xs font-semibold text-ink-700 hover:bg-white"
                 onClick={() => onRequireAuth?.("login")}
               >
                 Logga in
@@ -277,7 +277,7 @@ function AppShell({ pathname, user, onSwitchRole, onLogout, onRequireAuth, isGue
             <div className="mt-5 flex items-center justify-end gap-2">
               <button
                 type="button"
-                className="rounded-xl border border-black/15 bg-white px-4 py-2 text-sm font-semibold text-ink-700 hover:bg-[#f7f9fc]"
+                className="rounded-xl border border-black/15 bg-white px-4 py-2 text-sm font-semibold text-ink-700 hover:bg-white"
                 onClick={() => setShowLeaveSearchConfirm(false)}
               >
                 Avbryt

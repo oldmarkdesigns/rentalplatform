@@ -180,9 +180,10 @@ function AppContent() {
   } else if (pathname === "/onboarding") {
     content = <OnboardingPage user={app.user} onComplete={app.completeOnboarding} />;
   } else if (pathname.startsWith("/app")) {
-    const listingDetailMatch = pathname.match(/^\/app\/listings\/([^/]+)$/);
+    const listingDetailMatch = pathname.match(/^\/app\/listings\/([^/]+)(?:\/gallery)?$/);
     const manageListingMatch = pathname.match(/^\/app\/my-listings\/([^/]+)$/);
     const listingId = listingDetailMatch ? decodeURIComponent(listingDetailMatch[1]) : null;
+    const isListingGalleryPath = Boolean(pathname.match(/^\/app\/listings\/[^/]+\/gallery$/));
     const managedListingId = manageListingMatch ? decodeURIComponent(manageListingMatch[1]) : null;
 
     if (!app.user) {
@@ -195,7 +196,7 @@ function AppContent() {
       } else if (listingId) {
         content = (
           <AppShell pathname={pathname} user={null} isGuest onRequireAuth={openAuthOverlay}>
-            <ListingDetailPage app={app} listingId={listingId} isGuest onRequireAuth={openAuthOverlay} />
+            <ListingDetailPage app={app} listingId={listingId} isGuest onRequireAuth={openAuthOverlay} initialView={isListingGalleryPath ? "gallery" : "detail"} />
           </AppShell>
         );
       } else {
@@ -208,7 +209,7 @@ function AppContent() {
     if (pathname === "/app/rent") {
       appRouteContent = <RentPage app={app} onRequireAuth={openAuthOverlay} />;
     } else if (listingId) {
-      appRouteContent = <ListingDetailPage app={app} listingId={listingId} />;
+      appRouteContent = <ListingDetailPage app={app} listingId={listingId} initialView={isListingGalleryPath ? "gallery" : "detail"} />;
     } else if (managedListingId) {
       appRouteContent = <ManageListingPage app={app} listingId={managedListingId} />;
     } else if (pathname === "/app/my-listings") {

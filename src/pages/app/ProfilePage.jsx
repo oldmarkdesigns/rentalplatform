@@ -220,7 +220,7 @@ function ProfilePage({ app }) {
         <nav className="mx-auto flex w-full max-w-[1240px] flex-wrap items-center justify-start gap-5">
           {[
             { key: "profile", label: "Profil" },
-            { key: "favorites", label: "Favoriter" },
+            { key: "favorites", label: "Sparade objekt" },
             { key: "history", label: "Sökhistorik" }
           ].map((tab) => {
             const active = activeTab === tab.key;
@@ -249,7 +249,7 @@ function ProfilePage({ app }) {
           <div className="grid gap-4 lg:grid-cols-2">
             <article className="rounded-3xl border border-black/10 bg-white p-5">
               <div className="flex items-center gap-3">
-                <div className="inline-flex h-12 w-12 items-center justify-center rounded-full border border-black/20 bg-[#f8fafc] text-sm font-semibold text-ink-700">
+                <div className="inline-flex h-12 w-12 items-center justify-center rounded-full border border-black/20 bg-white text-sm font-semibold text-ink-700">
                   {(user?.name || "AA")
                     .split(" ")
                     .filter(Boolean)
@@ -346,30 +346,30 @@ function ProfilePage({ app }) {
                 <div>
                   <h2 className="text-xl font-semibold">Hantera användare</h2>
                   <p className="mt-1 text-sm text-ink-600">
-                    Bjud in kollegor så att ni kan söka lokaler tillsammans, spara favoriter och boka visningar i samma team.
+                    Bjud in kollegor så att ni kan söka lokaler tillsammans, spara objekt och boka visningar i samma team.
                   </p>
                 </div>
-                <span className="rounded-full border border-black/10 bg-[#f8fafc] px-3 py-1 text-xs font-semibold text-ink-700">
+                <span className="rounded-full border border-black/10 bg-white px-3 py-1 text-xs font-semibold text-ink-700">
                   {teamMembers.length} användare
                 </span>
               </div>
 
               <form className="mt-4 grid gap-2 sm:grid-cols-[1.3fr_1fr_1fr_auto]" onSubmit={inviteTeamMember}>
                 <input
-                  className="w-full rounded-xl border border-black/15 bg-[#f7f9fc] px-3 py-2 text-sm text-ink-900 placeholder:text-ink-500 focus:border-[#0f1930] focus:outline-none"
+                  className="w-full rounded-xl border border-black/15 bg-white px-3 py-2 text-sm text-ink-900 placeholder:text-ink-500 focus:border-[#0f1930] focus:outline-none"
                   value={teamInvite.email}
                   onChange={(event) => setTeamInvite((prev) => ({ ...prev, email: event.target.value }))}
                   placeholder="E-post"
                   type="email"
                 />
                 <input
-                  className="w-full rounded-xl border border-black/15 bg-[#f7f9fc] px-3 py-2 text-sm text-ink-900 placeholder:text-ink-500 focus:border-[#0f1930] focus:outline-none"
+                  className="w-full rounded-xl border border-black/15 bg-white px-3 py-2 text-sm text-ink-900 placeholder:text-ink-500 focus:border-[#0f1930] focus:outline-none"
                   value={teamInvite.firstName}
                   onChange={(event) => setTeamInvite((prev) => ({ ...prev, firstName: event.target.value }))}
                   placeholder="Förnamn"
                 />
                 <input
-                  className="w-full rounded-xl border border-black/15 bg-[#f7f9fc] px-3 py-2 text-sm text-ink-900 placeholder:text-ink-500 focus:border-[#0f1930] focus:outline-none"
+                  className="w-full rounded-xl border border-black/15 bg-white px-3 py-2 text-sm text-ink-900 placeholder:text-ink-500 focus:border-[#0f1930] focus:outline-none"
                   value={teamInvite.lastName}
                   onChange={(event) => setTeamInvite((prev) => ({ ...prev, lastName: event.target.value }))}
                   placeholder="Efternamn"
@@ -383,7 +383,7 @@ function ProfilePage({ app }) {
               </form>
 
               <div className="mt-4 overflow-hidden rounded-2xl border border-black/10">
-                <div className="grid grid-cols-[1.6fr_1fr_1fr_auto] gap-2 border-b border-black/10 bg-[#f8fafc] px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-ink-500">
+                <div className="grid grid-cols-[1.6fr_1fr_1fr_auto] gap-2 border-b border-black/10 bg-white px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-ink-500">
                   <span>E-post</span>
                   <span>Förnamn</span>
                   <span>Efternamn</span>
@@ -406,7 +406,7 @@ function ProfilePage({ app }) {
                         {member.id !== "team-owner" ? (
                           <button
                             type="button"
-                            className="rounded-lg border border-black/15 bg-white px-2 py-1 text-[11px] font-semibold text-ink-700 hover:bg-[#eef3fa]"
+                            className="rounded-lg border border-black/15 bg-white px-2 py-1 text-[11px] font-semibold text-ink-700 hover:bg-white"
                             onClick={() => removeTeamMember(member.id)}
                           >
                             Ta bort
@@ -425,19 +425,19 @@ function ProfilePage({ app }) {
           <div>
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
-                <h2 className="text-xl font-semibold">Favoriter</h2>
+                <h2 className="text-xl font-semibold">Sparade objekt</h2>
                 <p className="mt-1 text-sm text-ink-600">Objekt du har sparat för uppföljning.</p>
               </div>
-              <span className="rounded-full border border-black/10 bg-[#f8fafc] px-3 py-1 text-xs font-semibold text-ink-700">
+              <span className="rounded-full border border-black/10 bg-white px-3 py-1 text-xs font-semibold text-ink-700">
                 {favoriteListings.length} sparade
               </span>
             </div>
             {favoriteListings.length === 0 ? (
               <p className="mt-3 rounded-2xl border border-black/10 bg-[#fafafa] px-3 py-3 text-sm text-ink-600">
-                Inga favoriter ännu.
+                Inga sparade objekt ännu.
               </p>
             ) : (
-              <div className="mt-3 grid gap-4 md:grid-cols-2">
+              <div className="mt-3 grid gap-4 lg:grid-cols-3">
                 {favoriteListings.map((listing) => (
                   <ListingVisualCard
                     key={listing.id}
@@ -460,7 +460,7 @@ function ProfilePage({ app }) {
                   <h2 className="text-xl font-semibold">Sparade filter</h2>
                   <p className="mt-1 text-sm text-ink-600">Välj ett filter för att öppna sökresultat med samma inställningar.</p>
                 </div>
-                <span className="rounded-full border border-black/10 bg-[#f8fafc] px-3 py-1 text-xs font-semibold text-ink-700">
+                <span className="rounded-full border border-black/10 bg-white px-3 py-1 text-xs font-semibold text-ink-700">
                   {filterPresets.length} sparade
                 </span>
               </div>
@@ -496,7 +496,7 @@ function ProfilePage({ app }) {
                           <div className="flex items-center gap-2">
                             <button
                               type="button"
-                              className="rounded-xl border border-black/20 bg-white px-3 py-1.5 text-xs font-semibold text-ink-700 hover:bg-[#eef3fa]"
+                              className="rounded-xl border border-black/20 bg-white px-3 py-1.5 text-xs font-semibold text-ink-700 hover:bg-white"
                               onClick={(event) => {
                                 event.stopPropagation();
                                 navigateTo(targetUrl);
@@ -548,7 +548,7 @@ function ProfilePage({ app }) {
                   <h2 className="text-xl font-semibold">Sparade AI-sökningar</h2>
                   <p className="mt-1 text-sm text-ink-600">Återanvänd tidigare AI-sökningar och kör dem igen direkt.</p>
                 </div>
-                <span className="rounded-full border border-black/10 bg-[#f8fafc] px-3 py-1 text-xs font-semibold text-ink-700">
+                <span className="rounded-full border border-black/10 bg-white px-3 py-1 text-xs font-semibold text-ink-700">
                   {savedAiSearches.length} sparade
                 </span>
               </div>
@@ -584,7 +584,7 @@ function ProfilePage({ app }) {
                           <div className="flex items-center gap-2">
                             <button
                               type="button"
-                              className="rounded-xl border border-black/20 bg-white px-3 py-1.5 text-xs font-semibold text-ink-700 hover:bg-[#eef3fa]"
+                              className="rounded-xl border border-black/20 bg-white px-3 py-1.5 text-xs font-semibold text-ink-700 hover:bg-white"
                               onClick={(event) => {
                                 event.stopPropagation();
                                 navigateTo(targetUrl);

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import ListingVisualCard from "../../components/app/ListingVisualCard";
 import ViewingRequestModal from "../../components/app/ViewingRequestModal";
 import FurnishingToggle from "../../components/app/FurnishingToggle";
+import AiGuidedAssistant from "../../components/app/AiGuidedAssistant";
 import Breadcrumbs from "../../components/layout/Breadcrumbs";
 import {
   BalconyIcon,
@@ -9,6 +10,8 @@ import {
   BuildingIcon,
   CarIcon,
   DumbbellIcon,
+  FilterIcon,
+  ListIcon,
   LockerIcon,
   LoungeIcon,
   MapIcon,
@@ -20,10 +23,12 @@ import {
   ShieldIcon,
   SnowflakeIcon,
   SparklesIcon,
+  UploadIcon,
   UserIcon,
   UtensilsIcon,
   WifiIcon
 } from "../../components/icons/UiIcons";
+import { listingApi } from "../../api";
 import { districtOptions, listingTypes } from "../../data/mockData";
 import { navigateTo } from "../../lib/router";
 
@@ -121,6 +126,23 @@ function normalizeAmenityTerm(value) {
     .trim();
 }
 
+function applyAmenityAndFurnishedFilters(listings, amenityQuery, furnishedFilter = "all") {
+  const amenityTerms = parseAmenityTerms(amenityQuery).map((term) => term.toLowerCase());
+
+  return listings.filter((listing) => {
+    const amenityText = Array.isArray(listing.amenities) ? listing.amenities.join(" ").toLowerCase() : "";
+    if (amenityTerms.length > 0 && !amenityTerms.some((term) => amenityText.includes(term))) {
+      return false;
+    }
+
+    const furnishedSignal = /möbler|furnished|inredd/i.test(amenityText);
+    if (furnishedFilter === "yes" && !furnishedSignal) return false;
+    if (furnishedFilter === "no" && furnishedSignal) return false;
+
+    return true;
+  });
+}
+
 function hashSeed(value) {
   let hash = 0;
   for (let index = 0; index < value.length; index += 1) {
@@ -211,11 +233,24 @@ function loadGoogleMaps(apiKey) {
   return window.__googleMapsLoadPromise;
 }
 
-function GoogleListingsMap({ listings, onMarkerClick, dense = false }) {
+function GoogleListingsMap({
+  listings,
+  onMarkerClick,
+  onOpenListing,
+  onToggleShortlist,
+  shortlistedIds,
+  selectedListing,
+  onCloseSelectedListing,
+  dense = false
+}) {
   const containerRef = useRef(null);
   const mapRef = useRef(null);
+  const mapsRef = useRef(null);
   const markersByIdRef = useRef(new Map());
+  const infoWindowRef = useRef(null);
   const markerClickRef = useRef(onMarkerClick);
+  const closeSelectedListingRef = useRef(onCloseSelectedListing);
+  const suppressMapClickCloseRef = useRef(false);
   const didInitialFitRef = useRef(false);
   const lastListingsSignatureRef = useRef("");
   const [status, setStatus] = useState("loading");
@@ -225,6 +260,26 @@ function GoogleListingsMap({ listings, onMarkerClick, dense = false }) {
   useEffect(() => {
     markerClickRef.current = onMarkerClick;
   }, [onMarkerClick]);
+
+  useEffect(() => {
+    closeSelectedListingRef.current = onCloseSelectedListing;
+  }, [onCloseSelectedListing]);
+
+  function isMapInFullscreen() {
+    if (typeof document === "undefined") return false;
+    const fullscreenEl = document.fullscreenElement;
+    if (!fullscreenEl || !containerRef.current) return false;
+    return fullscreenEl === containerRef.current || containerRef.current.contains(fullscreenEl) || fullscreenEl.contains(containerRef.current);
+  }
+
+  function escapeHtml(value) {
+    return String(value || "")
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll("\"", "&quot;")
+      .replaceAll("'", "&#39;");
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -239,6 +294,7 @@ function GoogleListingsMap({ listings, onMarkerClick, dense = false }) {
         setStatus("loading");
         setErrorMessage("");
         const maps = await loadGoogleMaps(GOOGLE_MAPS_API_KEY);
+        mapsRef.current = maps;
         if (cancelled || !containerRef.current) return;
 
         if (!mapRef.current) {
@@ -252,6 +308,10 @@ function GoogleListingsMap({ listings, onMarkerClick, dense = false }) {
             mapTypeControl: false,
             clickableIcons: false,
             gestureHandling: "greedy"
+          });
+          mapRef.current.addListener("click", () => {
+            if (suppressMapClickCloseRef.current) return;
+            closeSelectedListingRef.current?.();
           });
         }
 
@@ -276,7 +336,13 @@ function GoogleListingsMap({ listings, onMarkerClick, dense = false }) {
               position,
               title: listing.title
             });
-            marker.addListener("click", () => markerClickRef.current?.(marker.__listing));
+            marker.addListener("click", () => {
+              suppressMapClickCloseRef.current = true;
+              window.setTimeout(() => {
+                suppressMapClickCloseRef.current = false;
+              }, 180);
+              markerClickRef.current?.(marker.__listing);
+            });
             markersByIdRef.current.set(String(listing.id), marker);
           } else {
             marker.setPosition(position);
@@ -315,14 +381,61 @@ function GoogleListingsMap({ listings, onMarkerClick, dense = false }) {
   }, [listings, retryToken]);
 
   useEffect(() => {
+    const maps = mapsRef.current;
+    const map = mapRef.current;
+    if (!maps || !map) return;
+
+    if (!selectedListing || !isMapInFullscreen()) {
+      infoWindowRef.current?.close();
+      return;
+    }
+
+    const marker = markersByIdRef.current.get(String(selectedListing.id));
+    if (!marker) return;
+
+    if (!infoWindowRef.current) {
+      infoWindowRef.current = new maps.InfoWindow({
+        maxWidth: 460,
+        disableAutoPan: false,
+        disableCloseButton: true
+      });
+    }
+
+    const title = escapeHtml(selectedListing.title);
+    const district = escapeHtml(selectedListing.district);
+    const address = escapeHtml(selectedListing.address);
+    const image = escapeHtml(selectedListing.image);
+    const type = escapeHtml(selectedListing.type || "Lokal");
+    const size = escapeHtml(selectedListing.sizeSqm);
+    const listingHref = `/app/listings/${encodeURIComponent(selectedListing.id)}`;
+
+    infoWindowRef.current.setContent(`
+      <a href="${listingHref}" style="display:block;width:320px;max-width:calc(100vw - 80px);font-family:inherit;color:#182338;text-decoration:none;background:#fff;border-radius:22px;overflow:hidden;">
+        <img src="${image}" alt="${title}" style="width:100%;height:132px;object-fit:cover;border-bottom-left-radius:16px;border-bottom-right-radius:16px;" />
+        <div style="padding:12px 14px 14px 14px;">
+          <div style="font-weight:700;font-size:18px;line-height:1.25;color:#111827;">${title}</div>
+          <div style="margin-top:4px;font-size:12px;line-height:1.4;color:#6b7280;">${district} • ${address}</div>
+          <div style="margin-top:6px;font-size:14px;font-weight:500;line-height:1.4;color:#1f2937;">${type} • ${size} kvm</div>
+        </div>
+      </a>
+    `);
+    infoWindowRef.current.open({
+      map,
+      anchor: marker
+    });
+  }, [selectedListing]);
+
+  useEffect(() => {
     return () => {
       markersByIdRef.current.forEach((marker) => marker.setMap(null));
       markersByIdRef.current.clear();
+      infoWindowRef.current?.close();
+      infoWindowRef.current = null;
     };
   }, []);
 
   return (
-    <div className={`relative overflow-hidden rounded-2xl border border-[#c6d1df] bg-[#dbe8f6] ${dense ? "h-72 sm:h-80" : "h-[480px]"}`}>
+    <div className={`relative overflow-hidden rounded-2xl border border-[#c6d1df] bg-white ${dense ? "h-[340px] sm:h-[460px]" : "h-[480px]"}`}>
       <div ref={containerRef} className="absolute inset-0" />
       {status === "loading" ? (
         <div className="absolute inset-0 grid place-items-center bg-white/55 text-xs font-semibold text-ink-700">Laddar karta...</div>
@@ -350,13 +463,29 @@ function GoogleListingsMap({ listings, onMarkerClick, dense = false }) {
           </div>
         </div>
       ) : null}
+      {selectedListing && onOpenListing && onToggleShortlist && !isMapInFullscreen() ? (
+        <div className="pointer-events-none absolute inset-x-3 bottom-3 z-20 sm:inset-x-4 sm:bottom-4">
+          <div className="pointer-events-auto relative mx-auto w-full max-w-[440px]">
+            <ListingVisualCard
+              listing={selectedListing}
+              shortlisted={Boolean(
+                shortlistedIds?.has(selectedListing.id) ||
+                shortlistedIds?.has(String(selectedListing.id))
+              )}
+              onOpenListing={onOpenListing}
+              onToggleShortlist={onToggleShortlist}
+              showMatchChip
+            />
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
 
 function MapCanvas({ listings, onMarkerClick, dense = false }) {
   return (
-    <div className={`relative overflow-hidden rounded-2xl border border-[#c6d1df] bg-[#dbe8f6] ${dense ? "h-64 sm:h-72" : "h-[420px]"}`}>
+    <div className={`relative overflow-hidden rounded-2xl border border-[#c6d1df] bg-white ${dense ? "h-64 sm:h-72" : "h-[420px]"}`}>
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_25%,#e9f2fb_0%,transparent_35%),radial-gradient(circle_at_75%_65%,#d2e3f5_0%,transparent_40%),linear-gradient(135deg,#cfdfef_0%,#e9f2fb_100%)]" />
       <div className="absolute inset-x-0 top-[32%] h-px bg-white/60" />
       <div className="absolute inset-x-0 top-[58%] h-px bg-white/50" />
@@ -408,7 +537,7 @@ function AuthPromptModal({ mode, onClose, onRequireAuth }) {
   }
 
   const message = mode === "save"
-    ? "Logga in eller skapa konto för att spara objekt och bygga en favoritlista."
+    ? "Logga in eller skapa konto för att spara objekt och bygga en lista med sparade objekt."
     : "Logga in eller skapa konto för att boka visning och skicka förfrågan till annonsör.";
 
   return (
@@ -462,6 +591,96 @@ function readFlagParam(params, key, legacyKey = "") {
   return raw === "1" || raw === "true";
 }
 
+function buildSearchChips(searchMeta, defaultMaxBudget) {
+  const chips = [];
+  const activeFilters = searchMeta?.filters || {};
+  const minBudgetValue = String(activeFilters.minBudget ?? "").trim();
+  const maxBudgetValue = String(activeFilters.maxBudget ?? "").trim();
+  const defaultMaxBudgetValue = String(defaultMaxBudget ?? "").trim();
+  const hasExplicitMinBudget = minBudgetValue !== "";
+  const hasExplicitMaxBudget = maxBudgetValue !== "" && maxBudgetValue !== defaultMaxBudgetValue;
+
+  if (activeFilters.query) chips.push(`Sökord: ${activeFilters.query}`);
+  if (activeFilters.district && activeFilters.district !== "Alla") chips.push(`Område: ${activeFilters.district}`);
+  if (Array.isArray(activeFilters.type) && activeFilters.type.length > 0) chips.push(`Typ: ${activeFilters.type.join(", ")}`);
+  if (activeFilters.teamSize) chips.push(`Platser: ${activeFilters.teamSize}+`);
+  if (activeFilters.minSize || activeFilters.maxSize) chips.push(`Yta: ${activeFilters.minSize || 0}-${activeFilters.maxSize || "∞"} kvm`);
+  if (hasExplicitMinBudget || hasExplicitMaxBudget) chips.push(`Budget: ${minBudgetValue || 0}-${maxBudgetValue || "∞"} kr`);
+  if (activeFilters.transitDistance) chips.push(`Kommunaltrafik: ${activeFilters.transitDistance}`);
+  if (activeFilters.moveInDate) chips.push(`Inflytt: ${activeFilters.moveInDate}`);
+  if (activeFilters.contractFlex) chips.push(`Avtal: ${activeFilters.contractFlex}`);
+  if (activeFilters.accessHours) chips.push(`Access: ${activeFilters.accessHours}`);
+  if (activeFilters.parkingType) chips.push(`Parkering: ${activeFilters.parkingType}`);
+  if (activeFilters.layoutType) chips.push(`Planlösning: ${activeFilters.layoutType}`);
+  if (activeFilters.advertiser && activeFilters.advertiser !== "Alla") chips.push(`Annonsör: ${activeFilters.advertiser}`);
+  if (activeFilters.includeOperatingCosts) chips.push("Driftkostnader ingår");
+  if (activeFilters.accessibilityAdapted) chips.push("Tillgänglighetsanpassad");
+  if (activeFilters.ecoCertified) chips.push("Miljöcertifierad");
+  if (searchMeta?.amenityQuery) chips.push(`Bekvämlighet: ${searchMeta.amenityQuery}`);
+  if (searchMeta?.furnishedFilter === "yes") chips.push("Möblerad");
+  if (searchMeta?.furnishedFilter === "no") chips.push("Ej möblerad");
+
+  return chips;
+}
+
+function formatSuggestionChanges(candidate, baseline) {
+  const parts = [];
+  const nextFilters = candidate?.nextFilters || {};
+  const baseFilters = baseline?.filters || {};
+  const nextAmenityQuery = String(candidate?.nextAmenityQuery || "").trim();
+  const baseAmenityQuery = String(baseline?.amenityQuery || "").trim();
+  const nextFurnished = candidate?.nextFurnishedFilter || "all";
+  const baseFurnished = baseline?.furnishedFilter || "all";
+
+  if ((nextFilters.district || "Alla") !== (baseFilters.district || "Alla")) {
+    parts.push(`Område: ${nextFilters.district || "Alla områden"}`);
+  }
+  const nextType = Array.isArray(nextFilters.type) && nextFilters.type.length > 0 ? nextFilters.type.join(", ") : "Alla typer";
+  const baseType = Array.isArray(baseFilters.type) && baseFilters.type.length > 0 ? baseFilters.type.join(", ") : "Alla typer";
+  if (nextType !== baseType) {
+    parts.push(`Typ: ${nextType}`);
+  }
+  if ((nextFilters.minSize || "") !== (baseFilters.minSize || "") || (nextFilters.maxSize || "") !== (baseFilters.maxSize || "")) {
+    parts.push(`Yta: ${nextFilters.minSize || "min valfri"} - ${nextFilters.maxSize || "max valfri"}`);
+  }
+  if ((nextFilters.minBudget || "") !== (baseFilters.minBudget || "") || (nextFilters.maxBudget || "") !== (baseFilters.maxBudget || "")) {
+    parts.push(`Budget: ${nextFilters.minBudget || "från valfri"} - ${nextFilters.maxBudget || "till valfri"} kr`);
+  }
+  if ((nextFilters.moveInDate || "") !== (baseFilters.moveInDate || "")) {
+    parts.push(`Inflyttning: ${nextFilters.moveInDate || "flexibelt datum"}`);
+  }
+  if ((nextFilters.contractFlex || "") !== (baseFilters.contractFlex || "")) {
+    parts.push(`Avtal: ${nextFilters.contractFlex || "alla"}`);
+  }
+  if ((nextFilters.transitDistance || "") !== (baseFilters.transitDistance || "")) {
+    parts.push(`Kommunaltrafik: ${nextFilters.transitDistance || "alla avstånd"}`);
+  }
+  if ((nextFilters.layoutType || "") !== (baseFilters.layoutType || "")) {
+    parts.push(`Planlösning: ${nextFilters.layoutType || "alla"}`);
+  }
+  if ((nextFilters.advertiser || "Alla") !== (baseFilters.advertiser || "Alla")) {
+    parts.push(`Annonsör: ${nextFilters.advertiser || "Alla"}`);
+  }
+  if (Boolean(nextFilters.includeOperatingCosts) !== Boolean(baseFilters.includeOperatingCosts)) {
+    parts.push(`Driftkostnad ingår: ${nextFilters.includeOperatingCosts ? "ja" : "nej"}`);
+  }
+  if (Boolean(nextFilters.accessibilityAdapted) !== Boolean(baseFilters.accessibilityAdapted)) {
+    parts.push(`Tillgänglighetsanpassad: ${nextFilters.accessibilityAdapted ? "ja" : "nej"}`);
+  }
+  if (Boolean(nextFilters.ecoCertified) !== Boolean(baseFilters.ecoCertified)) {
+    parts.push(`Miljöcertifierad: ${nextFilters.ecoCertified ? "ja" : "nej"}`);
+  }
+  if (nextAmenityQuery !== baseAmenityQuery) {
+    parts.push(`Bekvämligheter: ${nextAmenityQuery || "utan specifika krav"}`);
+  }
+  if (nextFurnished !== baseFurnished) {
+    parts.push(`Möblering: ${nextFurnished === "all" ? "alla" : nextFurnished === "yes" ? "möblerad" : "omöblerad"}`);
+  }
+
+  if (parts.length === 0) return candidate?.preview || "";
+  return parts.join(" • ");
+}
+
 function RentPage({ app, isGuest = false, onRequireAuth }) {
   const {
     listings,
@@ -480,21 +699,27 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
   const [showSearchEditor, setShowSearchEditor] = useState(false);
   const [isClosingSearchEditor, setIsClosingSearchEditor] = useState(false);
   const [showAdvancedSearchEditor, setShowAdvancedSearchEditor] = useState(false);
-  const [showEditorAiPanel, setShowEditorAiPanel] = useState(false);
+  const [showEditorAiPanel, setShowEditorAiPanel] = useState(true);
+  const [sidePanelMode, setSidePanelMode] = useState("ai");
+  const [isSwitchingSidePanel, setIsSwitchingSidePanel] = useState(false);
+  const [showAdvancedFiltersContent, setShowAdvancedFiltersContent] = useState(false);
+  const [isCollapsingAdvancedFilters, setIsCollapsingAdvancedFilters] = useState(false);
   const [showEditorAiInfo, setShowEditorAiInfo] = useState(false);
   const [editorModeOpacity, setEditorModeOpacity] = useState(1);
-  const [editorAiPrompt, setEditorAiPrompt] = useState("");
   const [amenityQuery, setAmenityQuery] = useState("");
   const [furnishedFilter, setFurnishedFilter] = useState("all");
   const [appliedSearchMeta, setAppliedSearchMeta] = useState({
     filters: savedFilters,
     amenityQuery: "",
     furnishedFilter: "all",
-    aiPrompt: ""
+    aiPrompt: "",
+    aiSuggestionLabel: ""
   });
   const [bookingListing, setBookingListing] = useState(null);
+  const [selectedMapListing, setSelectedMapListing] = useState(null);
   const [authPromptMode, setAuthPromptMode] = useState("");
-  const [showMap, setShowMap] = useState(true);
+  const [resultViewMode, setResultViewMode] = useState("list");
+  const [aiGuideResetKey, setAiGuideResetKey] = useState(0);
   const [sortBy, setSortBy] = useState("relevance");
   const [useNewSearchCta, setUseNewSearchCta] = useState(false);
   const [isAvailableListingsView, setIsAvailableListingsView] = useState(() => hasAvailableListingsViewInUrl());
@@ -503,6 +728,15 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
   const [isResettingToAvailable, setIsResettingToAvailable] = useState(false);
   const [showSearchSummaryCard, setShowSearchSummaryCard] = useState(() => !hasAvailableListingsViewInUrl());
   const [animateSearchSummaryIn, setAnimateSearchSummaryIn] = useState(false);
+  const [aiLivePreview, setAiLivePreview] = useState({
+    filters: null,
+    amenityQuery: "",
+    furnishedFilter: "all",
+    aiPrompt: "",
+    matchCount: null
+  });
+  const [noMatchSuggestions, setNoMatchSuggestions] = useState([]);
+  const [noMatchSuggestionsLoading, setNoMatchSuggestionsLoading] = useState(false);
   const landingSearchAppliedRef = useRef(false);
   const editorModeTimerRef = useRef(null);
   const closeEditorTimerRef = useRef(null);
@@ -510,7 +744,12 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
   const availableTransitionTimerRef = useRef(null);
   const availableEnterTimerRef = useRef(null);
   const resetToAvailableTimerRef = useRef(null);
+  const sidePanelSwitchTimerRef = useRef(null);
+  const advancedFiltersTimerRef = useRef(null);
+  const noMatchSuggestionRequestRef = useRef(0);
   const filterExpandedBeforeAiRef = useRef(false);
+  const headerUploadInputRef = useRef(null);
+  const resultsTopRef = useRef(null);
 
   const favoriteIds = useMemo(() => new Set(favorites.map((entry) => entry.listingId)), [favorites]);
   const listingsById = useMemo(() => new Map(listings.map((item) => [item.id, item])), [listings]);
@@ -566,7 +805,11 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
     setShowSearchSummaryCard(false);
     setAnimateSearchSummaryIn(false);
     setShowAdvancedSearchEditor(false);
-    setShowEditorAiPanel(false);
+    setShowEditorAiPanel(true);
+    setSidePanelMode("ai");
+    setIsSwitchingSidePanel(false);
+    setShowAdvancedFiltersContent(false);
+    setIsCollapsingAdvancedFilters(false);
     setEditorModeOpacity(1);
   }, [isAvailableListingsView]);
 
@@ -590,8 +833,47 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
       if (resetToAvailableTimerRef.current) {
         clearTimeout(resetToAvailableTimerRef.current);
       }
+      if (sidePanelSwitchTimerRef.current) {
+        clearTimeout(sidePanelSwitchTimerRef.current);
+      }
+      if (advancedFiltersTimerRef.current) {
+        clearTimeout(advancedFiltersTimerRef.current);
+      }
     };
   }, []);
+
+  useEffect(() => {
+    const targetMode = showEditorAiPanel ? "ai" : "filter";
+    if (targetMode === sidePanelMode) return;
+    if (sidePanelSwitchTimerRef.current) {
+      clearTimeout(sidePanelSwitchTimerRef.current);
+    }
+    setIsSwitchingSidePanel(true);
+    sidePanelSwitchTimerRef.current = setTimeout(() => {
+      setSidePanelMode(targetMode);
+      setIsSwitchingSidePanel(false);
+      sidePanelSwitchTimerRef.current = null;
+    }, 320);
+  }, [showEditorAiPanel, sidePanelMode]);
+
+  useEffect(() => {
+    if (showAdvancedSearchEditor) {
+      if (advancedFiltersTimerRef.current) {
+        clearTimeout(advancedFiltersTimerRef.current);
+        advancedFiltersTimerRef.current = null;
+      }
+      setShowAdvancedFiltersContent(true);
+      setIsCollapsingAdvancedFilters(false);
+      return;
+    }
+    if (!showAdvancedFiltersContent) return;
+    setIsCollapsingAdvancedFilters(true);
+    advancedFiltersTimerRef.current = setTimeout(() => {
+      setShowAdvancedFiltersContent(false);
+      setIsCollapsingAdvancedFilters(false);
+      advancedFiltersTimerRef.current = null;
+    }, 320);
+  }, [showAdvancedSearchEditor, showAdvancedFiltersContent]);
 
   function transitionFromAvailableToResults() {
     if (availableTransitionTimerRef.current) {
@@ -601,7 +883,7 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
     setAnimateSearchSummaryIn(false);
     setIsLeavingAvailableView(true);
     setShowAdvancedSearchEditor(false);
-    setShowEditorAiPanel(false);
+    setShowEditorAiPanel(true);
     setEditorModeOpacity(1);
     availableTransitionTimerRef.current = setTimeout(() => {
       setIsAvailableListingsView(false);
@@ -693,6 +975,15 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
     editorModeTimerRef.current = setTimeout(() => {
       setShowEditorAiPanel(nextAiEnabled);
       setShowAdvancedSearchEditor(nextAiEnabled ? true : filterExpandedBeforeAiRef.current);
+      if (!nextAiEnabled) {
+        setAiLivePreview({
+          filters: null,
+          amenityQuery: "",
+          furnishedFilter: "all",
+          aiPrompt: "",
+          matchCount: null
+        });
+      }
       setEditorModeOpacity(1);
       editorModeTimerRef.current = null;
     }, 140);
@@ -711,38 +1002,96 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
     return inferred;
   }
 
-  async function submitEditorSearch(event) {
-    event.preventDefault();
-    const amenityTerms = amenityQuery.trim();
+  async function previewEditorAiFilters(nextFilters, context = {}) {
+    const nextAmenityTerms = String(context.amenityQuery || "").trim();
+    const nextPrompt = String(context.prompt || "").trim();
+    const nextFurnishedFilter = typeof context.furnishedFilter === "string" ? context.furnishedFilter : furnishedFilter;
+    setFilters(nextFilters);
+    setAmenityQuery(nextAmenityTerms);
+    setFurnishedFilter(nextFurnishedFilter);
+    setAiLivePreview({
+      filters: nextFilters,
+      amenityQuery: nextAmenityTerms,
+      furnishedFilter: nextFurnishedFilter,
+      aiPrompt: nextPrompt,
+      matchCount: null
+    });
+    const listingData = await searchListings(nextFilters);
+    const narrowed = applyAmenityAndFurnishedFilters(listingData, nextAmenityTerms, nextFurnishedFilter);
+    setAiLivePreview({
+      filters: nextFilters,
+      amenityQuery: nextAmenityTerms,
+      furnishedFilter: nextFurnishedFilter,
+      aiPrompt: nextPrompt,
+      matchCount: narrowed.length
+    });
+    return narrowed.length;
+  }
 
-    if (showEditorAiPanel) {
-      const prompt = editorAiPrompt.trim() || String(filters.query || "").trim();
-      if (!prompt) {
-        app.pushToast("Skriv en AI-prompt eller ett sökord först.", "info");
-        return;
-      }
-      try {
-        const aiResponse = await runAiSearch(prompt, filters);
-        const nextFilters = aiResponse?.suggestedFilters || filters;
-        const inferredAmenities = inferAmenitiesFromText(prompt);
-        const currentAmenities = parseAmenityTerms(amenityTerms);
-        const nextAmenityTerms = Array.from(new Set([...currentAmenities, ...inferredAmenities])).join(", ");
-        if (nextAmenityTerms !== amenityTerms) {
-          setAmenityQuery(nextAmenityTerms);
-        }
-        setFilters(nextFilters);
-        await executeSearch(nextFilters, { aiPrompt: prompt, amenityQuery: nextAmenityTerms, furnishedFilter });
-        if (isAvailableListingsView) {
-          transitionFromAvailableToResults();
-        } else {
-          closeSearchEditorSmooth();
-        }
-      } catch (_error) {
-        app.pushToast("AI-sök kunde inte köras just nu.", "error");
-      }
+  async function submitGuidedEditorAiSearch(payload) {
+    const prompt = String(payload?.prompt || "").trim();
+    if (!prompt) {
+      app.pushToast("Skriv en AI-prompt eller ett sökord först.", "info");
       return;
     }
 
+    const assistantFilters = payload?.filters || filters;
+    const assistantAmenityTerms = String(payload?.amenityQuery || "").trim();
+    const assistantFurnishedFilter = typeof payload?.furnishedFilter === "string" ? payload.furnishedFilter : furnishedFilter;
+
+    try {
+      const aiResponse = await runAiSearch(prompt, assistantFilters);
+      const nextFilters = aiResponse?.suggestedFilters || assistantFilters;
+      const inferredAmenities = inferAmenitiesFromText(prompt);
+      const explicitAmenities = parseAmenityTerms(assistantAmenityTerms);
+      const mergedAmenityTerms = Array.from(new Set([...explicitAmenities, ...inferredAmenities])).join(", ");
+
+      setFilters(nextFilters);
+      setAmenityQuery(mergedAmenityTerms);
+      setFurnishedFilter(assistantFurnishedFilter);
+      setAiLivePreview({
+        filters: nextFilters,
+        amenityQuery: mergedAmenityTerms,
+        furnishedFilter: assistantFurnishedFilter,
+        aiPrompt: prompt,
+        matchCount: null
+      });
+      await executeSearch(nextFilters, {
+        aiPrompt: prompt,
+        amenityQuery: mergedAmenityTerms,
+        furnishedFilter: assistantFurnishedFilter
+      });
+      setAiLivePreview({
+        filters: null,
+        amenityQuery: "",
+        furnishedFilter: "all",
+        aiPrompt: "",
+        matchCount: null
+      });
+      if (isAvailableListingsView) {
+        transitionFromAvailableToResults();
+      } else {
+        closeSearchEditorSmooth();
+      }
+    } catch (_error) {
+      app.pushToast("AI-sök kunde inte köras just nu.", "error");
+    }
+  }
+
+  async function submitEditorSearch(event) {
+    event.preventDefault();
+    if (showEditorAiPanel) {
+      return;
+    }
+    const amenityTerms = amenityQuery.trim();
+
+    setAiLivePreview({
+      filters: null,
+      amenityQuery: "",
+      furnishedFilter: "all",
+      aiPrompt: "",
+      matchCount: null
+    });
     await executeSearch(filters, { amenityQuery: amenityTerms, furnishedFilter });
     if (isAvailableListingsView) {
       transitionFromAvailableToResults();
@@ -778,12 +1127,62 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
         }
         setEditorModeOpacity(1);
         setShowAdvancedSearchEditor(true);
-        setShowEditorAiPanel(false);
+        setShowEditorAiPanel(true);
         setAmenityQuery(appliedSearchMeta.amenityQuery || amenityQuery);
         setFurnishedFilter(appliedSearchMeta.furnishedFilter || furnishedFilter);
       }
       return nextValue;
     });
+  }
+
+  function openAiSearchEditor() {
+    if (isAvailableListingsView) {
+      setShowEditorAiPanel(true);
+      setShowAdvancedSearchEditor(true);
+      setEditorModeOpacity(1);
+      return;
+    }
+
+    setShowSearchSummaryCard(false);
+    setAnimateSearchSummaryIn(false);
+    if (closeEditorTimerRef.current) {
+      clearTimeout(closeEditorTimerRef.current);
+      closeEditorTimerRef.current = null;
+    }
+    if (editorModeTimerRef.current) {
+      clearTimeout(editorModeTimerRef.current);
+      editorModeTimerRef.current = null;
+    }
+    setIsClosingSearchEditor(false);
+    setEditorModeOpacity(1);
+    setShowAdvancedSearchEditor(true);
+    setShowEditorAiPanel(true);
+    setShowSearchEditor(true);
+  }
+
+  function handleFilterSearchToggle() {
+    const nextAiEnabled = !showEditorAiPanel;
+    setShowEditorAiPanel(nextAiEnabled);
+    if (!nextAiEnabled) {
+      setShowAdvancedSearchEditor(false);
+      setAiLivePreview({
+        filters: null,
+        amenityQuery: "",
+        furnishedFilter: "all",
+        aiPrompt: "",
+        matchCount: null
+      });
+      return;
+    }
+    setShowAdvancedSearchEditor(true);
+  }
+
+  async function submitSideFilterSearch(event) {
+    event.preventDefault();
+    await executeSearch(filters, { amenityQuery, furnishedFilter });
+    if (isAvailableListingsView) {
+      transitionFromAvailableToResults();
+    }
   }
 
   async function executeSearch(nextFilters = filters, options = {}) {
@@ -799,7 +1198,8 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
       filters: nextFilters,
       amenityQuery: amenityValue,
       furnishedFilter: furnishedValue,
-      aiPrompt: options.aiPrompt || ""
+      aiPrompt: options.aiPrompt || "",
+      aiSuggestionLabel: options.aiSuggestionLabel || ""
     });
   }
 
@@ -822,6 +1222,14 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
     });
     setUseNewSearchCta(false);
     setShowSearchEditor(false);
+    setAiLivePreview({
+      filters: null,
+      amenityQuery: "",
+      furnishedFilter: "all",
+      aiPrompt: "",
+      matchCount: null
+    });
+    setAiGuideResetKey((value) => value + 1);
     transitionFromResultsToAvailable();
   }
 
@@ -856,29 +1264,37 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
     const furnishedFromUrl = String(params.get("furnished") || "").trim();
     const aiEnabledFromUrl = params.get("ai") === "1";
     const aiPromptFromUrl = String(params.get("aiPrompt") || "").trim();
+    const baseFilters = { ...app.defaultFilters };
     const nextFilters = {
-      ...filters,
+      ...baseFilters,
       query: queryFromUrl,
-      district: districtFromUrl || filters.district,
-      type: typeFromUrl ? [typeFromUrl] : filters.type,
-      minSize: minSizeFromUrl || filters.minSize,
-      maxSize: maxSizeFromUrl || filters.maxSize,
-      teamSize: teamSizeFromUrl || filters.teamSize,
-      minBudget: minBudgetFromUrl || filters.minBudget,
-      maxBudget: maxBudgetFromUrl || filters.maxBudget,
-      transitDistance: transitDistanceFromUrl || filters.transitDistance,
-      moveInDate: moveInDateFromUrl || filters.moveInDate,
-      contractFlex: contractFlexFromUrl || filters.contractFlex,
-      accessHours: accessHoursFromUrl || filters.accessHours,
-      parkingType: parkingTypeFromUrl || filters.parkingType,
-      layoutType: layoutTypeFromUrl || filters.layoutType,
-      advertiser: advertiserFromUrl || filters.advertiser,
-      includeOperatingCosts: includeOperatingCostsFromUrl || Boolean(filters.includeOperatingCosts),
-      accessibilityAdapted: accessibilityAdaptedFromUrl || Boolean(filters.accessibilityAdapted),
-      ecoCertified: ecoCertifiedFromUrl || Boolean(filters.ecoCertified)
+      district: districtFromUrl || baseFilters.district,
+      type: typeFromUrl ? [typeFromUrl] : baseFilters.type,
+      minSize: minSizeFromUrl || baseFilters.minSize,
+      maxSize: maxSizeFromUrl || baseFilters.maxSize,
+      teamSize: teamSizeFromUrl || baseFilters.teamSize,
+      minBudget: minBudgetFromUrl || baseFilters.minBudget,
+      maxBudget: maxBudgetFromUrl || baseFilters.maxBudget,
+      transitDistance: transitDistanceFromUrl || baseFilters.transitDistance,
+      moveInDate: moveInDateFromUrl || baseFilters.moveInDate,
+      contractFlex: contractFlexFromUrl || baseFilters.contractFlex,
+      accessHours: accessHoursFromUrl || baseFilters.accessHours,
+      parkingType: parkingTypeFromUrl || baseFilters.parkingType,
+      layoutType: layoutTypeFromUrl || baseFilters.layoutType,
+      advertiser: advertiserFromUrl || baseFilters.advertiser,
+      includeOperatingCosts: includeOperatingCostsFromUrl || Boolean(baseFilters.includeOperatingCosts),
+      accessibilityAdapted: accessibilityAdaptedFromUrl || Boolean(baseFilters.accessibilityAdapted),
+      ecoCertified: ecoCertifiedFromUrl || Boolean(baseFilters.ecoCertified)
     };
     if (amenityFromUrl) setAmenityQuery(amenityFromUrl);
     if (furnishedFromUrl === "yes" || furnishedFromUrl === "no") setFurnishedFilter(furnishedFromUrl);
+    setAppliedSearchMeta({
+      filters: nextFilters,
+      amenityQuery: amenityFromUrl || "",
+      furnishedFilter: furnishedFromUrl === "yes" || furnishedFromUrl === "no" ? furnishedFromUrl : "all",
+      aiPrompt: aiPromptFromUrl || "",
+      aiSuggestionLabel: ""
+    });
 
     async function bootstrapFromLandingSearch() {
       try {
@@ -907,7 +1323,7 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
         setFilters(filtersToApply);
         await executeSearch(filtersToApply, {
           amenityQuery: nextAmenityQuery,
-          furnishedFilter: furnishedFromUrl === "yes" || furnishedFromUrl === "no" ? furnishedFromUrl : furnishedFilter,
+          furnishedFilter: furnishedFromUrl === "yes" || furnishedFromUrl === "no" ? furnishedFromUrl : "all",
           aiPrompt: aiPromptApplied
         });
       } catch (_error) {
@@ -916,58 +1332,261 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
     }
 
     void bootstrapFromLandingSearch();
-  }, [filters]);
+  }, [app.defaultFilters, runAiSearch]);
+
+  const showInlineAiGuide = true;
+  const useLiveAiSearchMeta = showInlineAiGuide && showEditorAiPanel;
+  const effectiveFilters = useLiveAiSearchMeta ? (aiLivePreview.filters || filters) : (appliedSearchMeta.filters || filters);
+  const effectiveAmenityQuery = useLiveAiSearchMeta ? (aiLivePreview.amenityQuery || amenityQuery) : appliedSearchMeta.amenityQuery;
+  const effectiveFurnishedFilter = useLiveAiSearchMeta ? (aiLivePreview.furnishedFilter || furnishedFilter) : appliedSearchMeta.furnishedFilter;
+  const effectiveAiPrompt = useLiveAiSearchMeta ? (aiLivePreview.aiPrompt || "") : (appliedSearchMeta.aiPrompt || "");
 
   const visibleListings = useMemo(() => {
-    return sortedListings.filter((listing) => {
-      const amenityText = Array.isArray(listing.amenities) ? listing.amenities.join(" ").toLowerCase() : "";
-      const amenityTerms = parseAmenityTerms(appliedSearchMeta.amenityQuery).map((term) => term.toLowerCase());
-      if (amenityTerms.length > 0 && !amenityTerms.some((term) => amenityText.includes(term))) {
-        return false;
-      }
-
-      const furnishedSignal = /möbler|furnished|inredd/i.test(amenityText);
-      if (appliedSearchMeta.furnishedFilter === "yes" && !furnishedSignal) {
-        return false;
-      }
-      if (appliedSearchMeta.furnishedFilter === "no" && furnishedSignal) {
-        return false;
-      }
-
-      return true;
-    });
-  }, [sortedListings, appliedSearchMeta]);
+    return applyAmenityAndFurnishedFilters(
+      sortedListings,
+      effectiveAmenityQuery,
+      effectiveFurnishedFilter
+    );
+  }, [sortedListings, effectiveAmenityQuery, effectiveFurnishedFilter]);
 
   const activeSearchChips = useMemo(() => {
-    const chips = [];
-    const activeFilters = appliedSearchMeta.filters || {};
-    const minBudgetValue = String(activeFilters.minBudget ?? "").trim();
-    const maxBudgetValue = String(activeFilters.maxBudget ?? "").trim();
-    const defaultMaxBudgetValue = String(app.defaultFilters?.maxBudget ?? "").trim();
-    const hasExplicitMinBudget = minBudgetValue !== "";
-    const hasExplicitMaxBudget = maxBudgetValue !== "" && maxBudgetValue !== defaultMaxBudgetValue;
-    if (appliedSearchMeta.aiPrompt) chips.push(`AI: ${appliedSearchMeta.aiPrompt}`);
-    if (activeFilters.query) chips.push(`Sökord: ${activeFilters.query}`);
-    if (activeFilters.district && activeFilters.district !== "Alla") chips.push(`Område: ${activeFilters.district}`);
-    if (Array.isArray(activeFilters.type) && activeFilters.type.length > 0) chips.push(`Typ: ${activeFilters.type.join(", ")}`);
-    if (activeFilters.teamSize) chips.push(`Platser: ${activeFilters.teamSize}+`);
-    if (activeFilters.minSize || activeFilters.maxSize) chips.push(`Yta: ${activeFilters.minSize || 0}-${activeFilters.maxSize || "∞"} kvm`);
-    if (hasExplicitMinBudget || hasExplicitMaxBudget) chips.push(`Budget: ${minBudgetValue || 0}-${maxBudgetValue || "∞"} kr`);
-    if (activeFilters.transitDistance) chips.push(`Kommunaltrafik: ${activeFilters.transitDistance}`);
-    if (activeFilters.moveInDate) chips.push(`Inflytt: ${activeFilters.moveInDate}`);
-    if (activeFilters.contractFlex) chips.push(`Avtal: ${activeFilters.contractFlex}`);
-    if (activeFilters.accessHours) chips.push(`Access: ${activeFilters.accessHours}`);
-    if (activeFilters.parkingType) chips.push(`Parkering: ${activeFilters.parkingType}`);
-    if (activeFilters.layoutType) chips.push(`Planlösning: ${activeFilters.layoutType}`);
-    if (activeFilters.advertiser && activeFilters.advertiser !== "Alla") chips.push(`Annonsör: ${activeFilters.advertiser}`);
-    if (activeFilters.includeOperatingCosts) chips.push("Driftkostnader ingår");
-    if (activeFilters.accessibilityAdapted) chips.push("Tillgänglighetsanpassad");
-    if (activeFilters.ecoCertified) chips.push("Miljöcertifierad");
-    if (appliedSearchMeta.amenityQuery) chips.push(`Bekvämlighet: ${appliedSearchMeta.amenityQuery}`);
-    if (appliedSearchMeta.furnishedFilter === "yes") chips.push("Möblerad");
-    if (appliedSearchMeta.furnishedFilter === "no") chips.push("Ej möblerad");
-    return chips;
+    return buildSearchChips(appliedSearchMeta, app.defaultFilters?.maxBudget);
   }, [appliedSearchMeta, app.defaultFilters?.maxBudget]);
+
+  const liveAiChips = useMemo(() => {
+    if (!useLiveAiSearchMeta) return [];
+    return buildSearchChips(
+      {
+        filters: effectiveFilters,
+        amenityQuery: effectiveAmenityQuery,
+        furnishedFilter: effectiveFurnishedFilter,
+        aiPrompt: effectiveAiPrompt
+      },
+      app.defaultFilters?.maxBudget
+    );
+  }, [
+    useLiveAiSearchMeta,
+    effectiveFilters,
+    effectiveAmenityQuery,
+    effectiveFurnishedFilter,
+    effectiveAiPrompt,
+    app.defaultFilters?.maxBudget
+  ]);
+  const displayedAiPrompt = useLiveAiSearchMeta ? effectiveAiPrompt : (appliedSearchMeta.aiPrompt || "");
+  const displayedSearchChips = useLiveAiSearchMeta ? liveAiChips : activeSearchChips;
+  const displayedAiSuggestionLabel = String(appliedSearchMeta.aiSuggestionLabel || "").trim();
+  const hasBegunSearch = Boolean(String(displayedAiPrompt || "").trim()) || displayedSearchChips.length > 0;
+  const noMatchSuggestionSignature = useMemo(
+    () =>
+      JSON.stringify({
+        filters: effectiveFilters,
+        amenityQuery: effectiveAmenityQuery,
+        furnishedFilter: effectiveFurnishedFilter,
+        hasBegunSearch,
+        resultViewMode
+      }),
+    [effectiveFilters, effectiveAmenityQuery, effectiveFurnishedFilter, hasBegunSearch, resultViewMode]
+  );
+
+  useEffect(() => {
+    if (!selectedMapListing?.id) return;
+    const exists = visibleListings.some((item) => String(item.id) === String(selectedMapListing.id));
+    if (!exists) {
+      setSelectedMapListing(null);
+    }
+  }, [visibleListings, selectedMapListing]);
+
+  useEffect(() => {
+    if (resultViewMode !== "map") {
+      setSelectedMapListing(null);
+    }
+  }, [resultViewMode]);
+
+  useEffect(() => {
+    if (!hasBegunSearch || resultViewMode !== "list" || visibleListings.length > 0) {
+      setNoMatchSuggestions([]);
+      setNoMatchSuggestionsLoading(false);
+      return;
+    }
+
+    const requestId = noMatchSuggestionRequestRef.current + 1;
+    noMatchSuggestionRequestRef.current = requestId;
+    let cancelled = false;
+
+    const baseFilters = { ...(effectiveFilters || filters) };
+    const baseAmenityQuery = String(effectiveAmenityQuery || "");
+    const baseFurnished = effectiveFurnishedFilter || furnishedFilter || "all";
+    const baselineMeta = {
+      filters: baseFilters,
+      amenityQuery: baseAmenityQuery,
+      furnishedFilter: baseFurnished
+    };
+    const defaultMaxBudget = Number(app.defaultFilters?.maxBudget || 250000);
+    const currentMaxBudget = Number(baseFilters.maxBudget || defaultMaxBudget || 0);
+    const nextBudgetMax = Math.max(
+      Number.isFinite(currentMaxBudget) && currentMaxBudget > 0 ? Math.round(currentMaxBudget * 1.2) : 0,
+      Number.isFinite(currentMaxBudget) && currentMaxBudget > 0 ? currentMaxBudget + 10000 : defaultMaxBudget
+    );
+
+    const fullyRelaxedFilters = {
+      ...baseFilters,
+      district: "Alla",
+      type: [],
+      minSize: "",
+      maxSize: "",
+      minBudget: "",
+      maxBudget: String(defaultMaxBudget || 250000),
+      moveInDate: "",
+      contractFlex: "",
+      transitDistance: "",
+      layoutType: "",
+      advertiser: "Alla",
+      includeOperatingCosts: false,
+      accessibilityAdapted: false,
+      ecoCertified: false
+    };
+
+    const candidates = [
+      baseFilters.district && baseFilters.district !== "Alla"
+        ? {
+            id: "district-all",
+            label: "Bredda område",
+            preview: "Område: alla områden",
+            nextFilters: { ...baseFilters, district: "Alla" },
+            nextAmenityQuery: baseAmenityQuery,
+            nextFurnishedFilter: baseFurnished
+          }
+        : null,
+      String(baseAmenityQuery).trim()
+        ? {
+            id: "amenities-clear",
+            label: "Minska bekvämlighetskrav",
+            preview: "Bekvämligheter: inga specifika krav",
+            nextFilters: { ...baseFilters },
+            nextAmenityQuery: "",
+            nextFurnishedFilter: baseFurnished
+          }
+        : null,
+      nextBudgetMax > currentMaxBudget
+        ? {
+            id: "budget-raise",
+            label: "Höj budgettak",
+            preview: `Maxbudget: ${nextBudgetMax.toLocaleString("sv-SE")} kr`,
+            nextFilters: { ...baseFilters, maxBudget: String(nextBudgetMax) },
+            nextAmenityQuery: baseAmenityQuery,
+            nextFurnishedFilter: baseFurnished
+          }
+        : null,
+      Array.isArray(baseFilters.type) && baseFilters.type.length > 0
+        ? {
+            id: "type-all",
+            label: "Bredda lokaltyp",
+            preview: "Typ: alla typer av lokal",
+            nextFilters: { ...baseFilters, type: [] },
+            nextAmenityQuery: baseAmenityQuery,
+            nextFurnishedFilter: baseFurnished
+          }
+        : null,
+      baseFilters.moveInDate
+        ? {
+            id: "movein-clear",
+            label: "Gör inflyttning mer flexibel",
+            preview: "Inflyttning: utan fast datum",
+            nextFilters: { ...baseFilters, moveInDate: "" },
+            nextAmenityQuery: baseAmenityQuery,
+            nextFurnishedFilter: baseFurnished
+          }
+        : null,
+      {
+        id: "combo-relax",
+        label: "Bredda område och bekvämligheter",
+        preview: "Område: alla • Bekvämligheter: valfria",
+        nextFilters: { ...baseFilters, district: "Alla" },
+        nextAmenityQuery: "",
+        nextFurnishedFilter: baseFurnished
+      },
+      {
+        id: "flex-date-contract",
+        label: "Gör tidplanen flexibel",
+        preview: "Inflyttning + avtal: flexibelt",
+        nextFilters: {
+          ...baseFilters,
+          moveInDate: "",
+          contractFlex: ""
+        },
+        nextAmenityQuery: baseAmenityQuery,
+        nextFurnishedFilter: baseFurnished
+      },
+      {
+        id: "relax-size-budget",
+        label: "Bredda yta och budget",
+        preview: "Yta: valfri • Budget: bredare intervall",
+        nextFilters: {
+          ...baseFilters,
+          minSize: "",
+          maxSize: "",
+          minBudget: "",
+          maxBudget: String(Math.max(nextBudgetMax, defaultMaxBudget || 250000))
+        },
+        nextAmenityQuery: baseAmenityQuery,
+        nextFurnishedFilter: baseFurnished
+      },
+      {
+        id: "reset-to-broad",
+        label: "Visa bredare matchning",
+        preview: "Bred sökning med färre begränsningar",
+        nextFilters: fullyRelaxedFilters,
+        nextAmenityQuery: "",
+        nextFurnishedFilter: "all"
+      }
+    ].filter(Boolean);
+
+    async function buildSuggestions() {
+      setNoMatchSuggestionsLoading(true);
+      const validSuggestions = [];
+      for (const candidate of candidates) {
+        if (cancelled || noMatchSuggestionRequestRef.current !== requestId) return;
+        try {
+          const { listings: nextListings } = await listingApi.getListings(candidate.nextFilters);
+          const filtered = applyAmenityAndFurnishedFilters(
+            nextListings,
+            candidate.nextAmenityQuery,
+            candidate.nextFurnishedFilter
+          );
+          if (filtered.length > 0) {
+            validSuggestions.push({
+              ...candidate,
+              count: filtered.length,
+              changeSummary: formatSuggestionChanges(candidate, baselineMeta)
+            });
+          }
+          if (validSuggestions.length >= 3) break;
+        } catch (_error) {
+          // Ignore individual suggestion failures.
+        }
+      }
+      if (cancelled || noMatchSuggestionRequestRef.current !== requestId) return;
+      setNoMatchSuggestions(validSuggestions);
+      setNoMatchSuggestionsLoading(false);
+    }
+
+    void buildSuggestions();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    noMatchSuggestionSignature,
+    visibleListings.length,
+    hasBegunSearch,
+    resultViewMode,
+    effectiveFilters,
+    filters,
+    effectiveAmenityQuery,
+    effectiveFurnishedFilter,
+    furnishedFilter,
+    app.defaultFilters?.maxBudget
+  ]);
 
   function handleToggleShortlist(listingId) {
     if (isGuest) {
@@ -987,12 +1606,551 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
 
   function openListingDetail(listing) {
     if (!listing?.id) return;
-    navigateTo(`/app/listings/${encodeURIComponent(listing.id)}`);
+    const source = isAvailableListingsView ? "available" : "search";
+    navigateTo(`/app/listings/${encodeURIComponent(listing.id)}?source=${source}`);
   }
 
+  function handleMapMarkerClick(listing) {
+    if (!listing?.id) return;
+    setSelectedMapListing(listing);
+  }
+
+  function handleUploadProgramFile(file) {
+    if (file) {
+      app.pushToast(`Lokalprogram uppladdat: ${file.name}`, "info");
+    }
+  }
+
+  async function submitInlineGuidedAiSearch(payload) {
+    const prompt = String(payload?.prompt || "").trim();
+    const nextFilters = payload?.filters || filters;
+    const nextAmenityQuery = String(payload?.amenityQuery || "").trim();
+    const nextFurnishedFilter = typeof payload?.furnishedFilter === "string" ? payload.furnishedFilter : furnishedFilter;
+    setFilters(nextFilters);
+    setFurnishedFilter(nextFurnishedFilter);
+    await executeSearch(nextFilters, {
+      aiPrompt: prompt,
+      amenityQuery: nextAmenityQuery,
+      furnishedFilter: nextFurnishedFilter
+    });
+  }
+
+  async function applyNoMatchSuggestion(suggestion) {
+    if (!suggestion) return;
+    const nextFilters = suggestion.nextFilters || filters;
+    const nextAmenityQuery = typeof suggestion.nextAmenityQuery === "string" ? suggestion.nextAmenityQuery : amenityQuery;
+    const nextFurnishedFilter = suggestion.nextFurnishedFilter || furnishedFilter;
+    setFilters(nextFilters);
+    setAmenityQuery(nextAmenityQuery);
+    setFurnishedFilter(nextFurnishedFilter);
+    await executeSearch(nextFilters, {
+      amenityQuery: nextAmenityQuery,
+      furnishedFilter: nextFurnishedFilter,
+      aiPrompt: String(appliedSearchMeta.aiPrompt || "").trim(),
+      aiSuggestionLabel: `AI-förslag: ${suggestion.label}`
+    });
+    setAiGuideResetKey((value) => value + 1);
+    setNoMatchSuggestions([]);
+  }
+
+  const showPreferencesSummaryCard = !showSearchEditor
+    && !isResettingToAvailable
+    && !isLeavingAvailableView
+    && hasBegunSearch
+    && (showInlineAiGuide || showSearchSummaryCard);
+
+  const summaryBaseFilters = showInlineAiGuide ? (effectiveFilters || filters) : (appliedSearchMeta.filters || filters);
+  const summaryPrompt = showInlineAiGuide ? String(effectiveAiPrompt || "").trim() : String(appliedSearchMeta.aiPrompt || "").trim();
+  const summaryResultCount = aiLivePreview.matchCount ?? visibleListings.length;
+
+  const preferencesSummaryCard = showPreferencesSummaryCard ? (
+    <div
+      className={`rounded-3xl border border-black/15 bg-white p-4 sm:p-5 ${
+        animateSearchSummaryIn ? "search-summary-dissolve-in" : ""
+      } ${isResettingToAvailable ? "search-summary-dissolve-out" : ""}`}
+    >
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="space-y-1.5">
+          <p className="inline-flex items-center gap-1.5 text-sm font-semibold text-ink-800">
+            <SparklesIcon className="h-4 w-4 text-[#4f46e5]" />
+            {summaryResultCount} lokaler matchar dina preferenser
+          </p>
+          {displayedSearchChips.length > 0 || displayedAiSuggestionLabel ? (
+            <div className="flex flex-wrap gap-2">
+              {displayedAiSuggestionLabel ? (
+                <span className="inline-flex items-center gap-1 rounded-full border border-[#4f46e5]/35 bg-[#eef0ff] px-2.5 py-1 text-xs font-semibold text-[#312e81]">
+                  <SparklesIcon className="h-3.5 w-3.5 text-[#4f46e5]" />
+                  {displayedAiSuggestionLabel}
+                </span>
+              ) : null}
+              {displayedSearchChips.map((chip) => (
+                chip.startsWith("AI-förslag:") ? (
+                  <span key={chip} className="inline-flex items-center gap-1 rounded-full border border-[#4f46e5]/35 bg-[#eef0ff] px-2.5 py-1 text-xs font-semibold text-[#312e81]">
+                    <SparklesIcon className="h-3.5 w-3.5 text-[#4f46e5]" />
+                    {chip}
+                  </span>
+                ) : (
+                  <span key={chip} className="rounded-full border border-black/10 bg-white px-2.5 py-1 text-xs font-semibold text-ink-700">
+                    {chip}
+                  </span>
+                )
+              ))}
+            </div>
+          ) : null}
+        </div>
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <button
+            type="button"
+            className="inline-flex h-[40px] items-center gap-1.5 rounded-xl border border-black/15 bg-white px-3 text-xs font-semibold text-ink-700 hover:bg-white"
+            onClick={() => {
+              if (isGuest) {
+                openAuthPrompt("save");
+                return;
+              }
+              if (summaryPrompt) {
+                saveAiSearch({
+                  prompt: summaryPrompt,
+                  filters: summaryBaseFilters
+                });
+                return;
+              }
+              void saveCurrentFilters(summaryBaseFilters);
+            }}
+          >
+            <SaveIcon className="h-3.5 w-3.5" />
+            {summaryPrompt ? "Spara AI-sökning" : "Spara sökfilter"}
+          </button>
+          <button
+            type="button"
+            className="inline-flex h-[40px] items-center gap-1.5 rounded-xl border border-black/15 bg-white px-3 text-xs font-semibold text-ink-700 hover:bg-white"
+            onClick={() => {
+              void handleResetSearchResults();
+            }}
+          >
+            <ResetIcon className="h-3.5 w-3.5" />
+            Nollställ
+          </button>
+        </div>
+      </div>
+    </div>
+  ) : null;
+
+  const useScrollableFilterPanel = showAdvancedFiltersContent || isCollapsingAdvancedFilters;
+
+  const sideFilterPanel = (
+    <article className={`flex flex-col overflow-hidden rounded-2xl border border-black/10 bg-white p-4 ${
+      useScrollableFilterPanel ? "lg:h-[calc(100dvh-15rem)] lg:max-h-[calc(100dvh-15rem)]" : ""
+    }`}>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-ink-700">
+          <FilterIcon className="h-3.5 w-3.5 text-[#0f1930]" />
+          Filter-sök
+        </div>
+        <div className="inline-flex h-10 items-center gap-2 rounded-2xl border border-black/10 bg-white px-3 text-xs font-semibold text-ink-700">
+          <span className="inline-flex items-center gap-1">
+            <FilterIcon className="h-3.5 w-3.5 text-[#0f1930]" />
+            <span>Filter-sök</span>
+          </span>
+          <PillToggle
+            checked={!showEditorAiPanel}
+            onToggle={handleFilterSearchToggle}
+            ariaLabel="Filter-sök i sidopanel"
+            className="h-6 w-10"
+          />
+        </div>
+      </div>
+
+      <form className={`mt-3 flex flex-col ${useScrollableFilterPanel ? "min-h-0 flex-1 overflow-hidden" : ""}`} onSubmit={submitSideFilterSearch}>
+        <div className={`space-y-3 ${useScrollableFilterPanel ? "min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1 pb-3" : ""}`}>
+          <div className="grid grid-cols-2 gap-3">
+            <label>
+              <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-ink-700">Antal platser</span>
+              <input
+                value={filters.teamSize}
+                onChange={(event) => setFilters((prev) => ({ ...prev, teamSize: event.target.value }))}
+                className={heroInputClass}
+                placeholder="Platser"
+                type="number"
+                min="1"
+              />
+            </label>
+            <label>
+              <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-ink-700">Område</span>
+              <select
+                value={filters.district}
+                onChange={(event) => setFilters((prev) => ({ ...prev, district: event.target.value }))}
+                className={heroSelectClass}
+              >
+                <option value="Alla" className="text-black">Alla områden</option>
+                {districtOptions.map((district) => <option key={district} value={district} className="text-black">{district}</option>)}
+              </select>
+            </label>
+          </div>
+
+          {showAdvancedFiltersContent ? (
+            <div className={`space-y-3 ${isCollapsingAdvancedFilters ? "search-editor-collapse-out" : "search-editor-expand-in"}`}>
+              <div className="grid grid-cols-2 gap-3">
+                <label>
+                  <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-ink-700">Typ</span>
+                  <select
+                    value={Array.isArray(filters.type) && filters.type.length > 0 ? filters.type[0] : "Alla"}
+                    onChange={(event) => {
+                      const nextType = event.target.value;
+                      setFilters((prev) => ({ ...prev, type: nextType === "Alla" ? [] : [nextType] }));
+                    }}
+                    className={heroSelectClass}
+                  >
+                    <option value="Alla" className="text-black">Alla typer</option>
+                    {listingTypes.map((type) => <option key={type} value={type} className="text-black">{type}</option>)}
+                  </select>
+                </label>
+                <label>
+                  <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-ink-700">Annonsör</span>
+                  <select
+                    value={filters.advertiser || "Alla"}
+                    onChange={(event) => setFilters((prev) => ({ ...prev, advertiser: event.target.value }))}
+                    className={heroSelectClass}
+                  >
+                    <option value="Alla" className="text-black">Alla</option>
+                    {advertiserOptions.map((option) => (
+                      <option key={option} value={option} className="text-black">{option}</option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <label>
+                  <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-ink-700">Min yta</span>
+                  <input
+                    value={filters.minSize}
+                    onChange={(event) => setFilters((prev) => ({ ...prev, minSize: event.target.value }))}
+                    className={heroInputClass}
+                    placeholder="Min kvm"
+                    type="number"
+                    min="0"
+                  />
+                </label>
+                <label>
+                  <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-ink-700">Max yta</span>
+                  <input
+                    value={filters.maxSize}
+                    onChange={(event) => setFilters((prev) => ({ ...prev, maxSize: event.target.value }))}
+                    className={heroInputClass}
+                    placeholder="Max kvm"
+                    type="number"
+                    min="0"
+                  />
+                </label>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <label>
+                  <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-ink-700">Min budget</span>
+                  <input
+                    value={filters.minBudget}
+                    onChange={(event) => setFilters((prev) => ({ ...prev, minBudget: event.target.value }))}
+                    className={heroInputClass}
+                    placeholder="0 kr"
+                    type="number"
+                    min="0"
+                  />
+                </label>
+                <label>
+                  <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-ink-700">Max budget</span>
+                  <input
+                    value={filters.maxBudget}
+                    onChange={(event) => setFilters((prev) => ({ ...prev, maxBudget: event.target.value }))}
+                    className={heroInputClass}
+                    placeholder="250000 kr"
+                    type="number"
+                    min="0"
+                  />
+                </label>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <label>
+                  <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-ink-700">Inflyttning</span>
+                  <input
+                    value={filters.moveInDate || ""}
+                    onChange={(event) => setFilters((prev) => ({ ...prev, moveInDate: event.target.value }))}
+                    className={`${heroInputClass} h-[48px] py-0`}
+                    type="date"
+                  />
+                </label>
+                <label>
+                  <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-ink-700">Avtal</span>
+                  <select
+                    value={filters.contractFlex || ""}
+                    onChange={(event) => setFilters((prev) => ({ ...prev, contractFlex: event.target.value }))}
+                    className={heroSelectClass}
+                  >
+                    {contractFlexOptions.map((option) => (
+                      <option key={option} value={option === "Alla" ? "" : option} className="text-black">{option}</option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <label>
+                  <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-ink-700">Kommunaltrafik</span>
+                  <select
+                    value={filters.transitDistance || ""}
+                    onChange={(event) => setFilters((prev) => ({ ...prev, transitDistance: event.target.value }))}
+                    className={heroSelectClass}
+                  >
+                    {transitDistanceOptions.map((option) => (
+                      <option key={option} value={option === "Alla" ? "" : option} className="text-black">{option}</option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-ink-700">Planlösning</span>
+                  <select
+                    value={filters.layoutType || ""}
+                    onChange={(event) => setFilters((prev) => ({ ...prev, layoutType: event.target.value }))}
+                    className={heroSelectClass}
+                  >
+                    {layoutTypeOptions.map((option) => (
+                      <option key={option} value={option === "Alla" ? "" : option} className="text-black">{option}</option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+
+              <div>
+                <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-ink-700">Möblering</span>
+                <FurnishingToggle
+                  value={furnishedFilter}
+                  onChange={setFurnishedFilter}
+                  options={furnishedOptions}
+                />
+              </div>
+
+              <div className="rounded-2xl border border-black/10 bg-white p-3">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-ink-700">Särskilda krav</p>
+                <div className="mt-2 grid grid-cols-1 gap-2">
+                  <label className="inline-flex items-center gap-2 text-sm text-ink-700">
+                    <input
+                      type="checkbox"
+                      checked={Boolean(filters.includeOperatingCosts)}
+                      onChange={(event) => setFilters((prev) => ({ ...prev, includeOperatingCosts: event.target.checked }))}
+                      className="h-4 w-4 rounded border-black/20"
+                    />
+                    Driftkostnad ingår
+                  </label>
+                  <label className="inline-flex items-center gap-2 text-sm text-ink-700">
+                    <input
+                      type="checkbox"
+                      checked={Boolean(filters.accessibilityAdapted)}
+                      onChange={(event) => setFilters((prev) => ({ ...prev, accessibilityAdapted: event.target.checked }))}
+                      className="h-4 w-4 rounded border-black/20"
+                    />
+                    Tillgänglighetsanpassad
+                  </label>
+                  <label className="inline-flex items-center gap-2 text-sm text-ink-700">
+                    <input
+                      type="checkbox"
+                      checked={Boolean(filters.ecoCertified)}
+                      onChange={(event) => setFilters((prev) => ({ ...prev, ecoCertified: event.target.checked }))}
+                      className="h-4 w-4 rounded border-black/20"
+                    />
+                    Miljöcertifierad
+                  </label>
+                </div>
+              </div>
+
+              <div>
+                <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-ink-700">Bekvämligheter</p>
+                <div className="flex flex-wrap gap-2">
+                  {editorAmenityOptions.map((option) => {
+                    const Icon = option.icon;
+                    const active = isAmenitySelected(option.value);
+                    return (
+                      <button
+                        key={option.value}
+                        type="button"
+                        className={`inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-semibold transition ${
+                          active ? "border-[#0f1930] bg-[#0f1930] text-white" : "border-black/15 bg-white text-ink-700 hover:bg-white"
+                        }`}
+                        onClick={() => toggleAmenity(option.value)}
+                      >
+                        <Icon className="h-3.5 w-3.5 shrink-0" />
+                        {option.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          ) : null}
+        </div>
+
+        <div className={`${useScrollableFilterPanel ? "sticky bottom-0 z-10 mt-1 shrink-0 border-t border-black/10 bg-white pt-3" : "mt-3"} flex flex-wrap items-center justify-end gap-2`}>
+          <button
+            type="button"
+            className="inline-flex h-[40px] items-center gap-1.5 rounded-xl border border-black/15 bg-white px-3 text-xs font-semibold text-ink-700 hover:bg-white"
+            onClick={() => setShowAdvancedSearchEditor((value) => !value)}
+          >
+            <span>{showAdvancedSearchEditor ? "Visa färre filter" : "Visa alla filter"}</span>
+            <span aria-hidden="true" className="text-sm leading-none">{showAdvancedSearchEditor ? "−" : "+"}</span>
+          </button>
+          <button
+            type="submit"
+            className="inline-flex h-[40px] items-center gap-1.5 rounded-xl border border-[#0f1930] bg-[#0f1930] px-4 text-xs font-semibold text-white hover:bg-[#16233f]"
+          >
+            <SearchIcon className="h-4 w-4" />
+            Sök lokaler
+          </button>
+        </div>
+      </form>
+    </article>
+  );
+
+  const resultsContent = (
+    <>
+      <div ref={resultsTopRef} className="flex flex-wrap items-center justify-between gap-2">
+        <div className="inline-flex items-center gap-1.5 rounded-2xl border border-black/10 bg-white px-3 py-2 text-xs font-semibold text-ink-700">
+          <BuildingIcon className="h-3.5 w-3.5 text-ink-600" />
+          {visibleListings.length} träffar
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="inline-flex items-center gap-1 rounded-xl border border-black/15 bg-white p-1">
+            <button
+              type="button"
+              className={`inline-flex min-h-[34px] items-center gap-1.5 rounded-lg px-3 text-xs font-semibold transition ${
+                resultViewMode === "list"
+                  ? "bg-[#0f1930] text-white"
+                  : "text-ink-700 hover:bg-white"
+              }`}
+              onClick={() => setResultViewMode("list")}
+              aria-pressed={resultViewMode === "list"}
+            >
+              <ListIcon className="h-3.5 w-3.5" />
+              Lista
+            </button>
+            <button
+              type="button"
+              className={`inline-flex min-h-[34px] items-center gap-1.5 rounded-lg px-3 text-xs font-semibold transition ${
+                resultViewMode === "map"
+                  ? "bg-[#0f1930] text-white"
+                  : "text-ink-700 hover:bg-white"
+              }`}
+              onClick={() => setResultViewMode("map")}
+              aria-pressed={resultViewMode === "map"}
+            >
+              <MapIcon className="h-3.5 w-3.5" />
+              Karta
+            </button>
+          </div>
+          <div className="inline-flex items-center gap-2">
+            <label className="text-xs font-semibold text-ink-700">Sortera</label>
+            <select
+              className="select-chevron min-h-[40px] min-w-[132px] rounded-xl border border-black/15 bg-white px-4 text-xs font-semibold text-ink-800 focus:border-[#0f1930] focus:outline-none"
+              value={sortBy}
+              onChange={(event) => setSortBy(event.target.value)}
+            >
+              <option value="relevance">Relevans</option>
+              <option value="price_asc">Hyra: lägst först</option>
+              <option value="price_desc">Hyra: högst först</option>
+              <option value="size_asc">Yta: minst först</option>
+              <option value="size_desc">Yta: störst först</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      {resultViewMode === "map" ? (
+        <div className="space-y-2">
+          <GoogleListingsMap
+            listings={visibleListings}
+            onMarkerClick={handleMapMarkerClick}
+            onOpenListing={openListingDetail}
+            onToggleShortlist={handleToggleShortlist}
+            shortlistedIds={favoriteIds}
+            selectedListing={selectedMapListing}
+            onCloseSelectedListing={() => setSelectedMapListing(null)}
+            dense
+          />
+          <p className="inline-flex items-center gap-1.5 text-xs text-ink-600"><MapIcon className="h-3.5 w-3.5" />Klicka på en markör för att visa objektkort direkt på kartan.</p>
+        </div>
+      ) : null}
+
+      {resultViewMode === "list" ? (visibleListings.length === 0 ? (
+        <div className="rounded-3xl border border-black/10 bg-white p-5">
+          <p className="text-xl font-semibold text-ink-900">Ingen matchning just nu</p>
+          <p className="mt-1 text-[1.05rem] text-ink-700">
+            Prova en snabb justering så kan jag hitta närliggande träffar direkt.
+          </p>
+          {noMatchSuggestionsLoading ? (
+            <p className="mt-3 text-sm text-ink-700">Tar fram justeringar som ger träffar...</p>
+          ) : noMatchSuggestions.length > 0 ? (
+            <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+              {noMatchSuggestions.map((suggestion) => {
+                const changeItems = String(suggestion.changeSummary || suggestion.preview || "")
+                  .split(" • ")
+                  .map((item) => item.trim())
+                  .filter(Boolean);
+                const visibleChanges = changeItems.slice(0, 3);
+                const extraChanges = Math.max(changeItems.length - visibleChanges.length, 0);
+                return (
+                  <button
+                    key={suggestion.id}
+                    type="button"
+                    className="group rounded-2xl border border-black/15 bg-white p-3 text-left transition hover:border-[#0f1930]/35 hover:bg-white"
+                    onClick={() => void applyNoMatchSuggestion(suggestion)}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <span className="text-sm font-semibold text-ink-900">{suggestion.label}</span>
+                      <span className="shrink-0 rounded-full border border-black/10 bg-white px-2 py-0.5 text-xs font-semibold text-ink-700">
+                        {suggestion.count} träffar
+                      </span>
+                    </div>
+                    <p className="mt-2 text-[11px] font-semibold uppercase tracking-wide text-ink-600">Ändrar</p>
+                    <div className="mt-1.5 flex flex-wrap gap-1.5">
+                      {visibleChanges.map((item) => (
+                        <span key={`${suggestion.id}-${item}`} className="rounded-full border border-black/10 bg-white px-2 py-0.5 text-xs font-medium text-ink-700">
+                          {item}
+                        </span>
+                      ))}
+                      {extraChanges > 0 ? (
+                        <span className="rounded-full border border-black/10 bg-white px-2 py-0.5 text-xs font-medium text-ink-700">
+                          +{extraChanges} fler
+                        </span>
+                      ) : null}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="mt-3 text-sm text-ink-700">
+              Inga säkra justeringar hittades just nu. Justera filter manuellt för att se fler alternativ.
+            </p>
+          )}
+        </div>
+      ) : (
+        <div className={`grid items-stretch gap-4 ${showInlineAiGuide ? "lg:grid-cols-2" : "lg:grid-cols-3"}`}>
+          {visibleListings.map((listing) => (
+            <ListingVisualCard
+              key={listing.id}
+              listing={listing}
+              shortlisted={favoriteIds.has(listing.id)}
+              onOpenListing={openListingDetail}
+              onToggleShortlist={handleToggleShortlist}
+              showMatchChip
+            />
+          ))}
+        </div>
+      )) : null}
+    </>
+  );
+
   return (
-    <section className="relative h-full overflow-y-auto p-4 sm:p-6">
-      <div className="relative mx-auto w-full max-w-[1240px]">
+    <section className="relative h-full overflow-y-auto px-4 py-3 sm:px-6 sm:py-4">
+      <div className="relative mx-auto w-full max-w-[1540px]">
         {isHydratingLandingSearch ? (
           <div className="grid min-h-[58vh] place-items-center">
             <div className="rounded-2xl border border-[#c8d1de] bg-white px-5 py-4 text-sm font-semibold text-ink-700">
@@ -1011,12 +2169,28 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
               />
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <h1 className="text-2xl font-semibold">{isAvailableListingsView ? "Lediga lokaler" : "Sökresultat"}</h1>
+                <div className="flex flex-wrap items-center gap-2">
+                  <input
+                    ref={headerUploadInputRef}
+                    type="file"
+                    className="hidden"
+                    onChange={(event) => handleUploadProgramFile(event.target.files?.[0] || null)}
+                  />
+                  <button
+                    type="button"
+                    className="inline-flex h-10 items-center gap-2 rounded-2xl border border-black/10 bg-white px-3 text-xs font-semibold text-ink-700 hover:bg-white"
+                    onClick={() => headerUploadInputRef.current?.click()}
+                  >
+                    <UploadIcon className="h-4 w-4 text-[#0f1930]" />
+                    Ladda upp lokalprogram
+                  </button>
+                </div>
               </div>
             </div>
 
-            {(showSearchEditor || isAvailableListingsView) ? (
+            {false ? (
               <article
-                className={`mx-auto w-full rounded-3xl border border-black/10 bg-white p-5 text-ink-900 sm:p-7 ${
+                className={`mx-auto w-full text-ink-900 ${
                   showSearchEditor && !isAvailableListingsView && !isClosingSearchEditor ? "search-editor-expand-in" : ""
                 } ${
                   (isClosingSearchEditor || isLeavingAvailableView) ? "search-editor-collapse-out" : ""
@@ -1024,53 +2198,35 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
                   isAvailableListingsView && isEnteringAvailableView ? "search-editor-expand-in" : ""
                 }`}
               >
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <h2 className="text-xl font-semibold text-ink-900 sm:text-2xl">Sök lokaler i hela Stockholm</h2>
-                  <div className="inline-flex items-center gap-2 rounded-2xl border border-black/10 bg-white px-3 py-2 text-xs font-semibold text-ink-700">
-                    <span className="inline-flex items-center gap-1">
-                      <SparklesIcon className="h-3.5 w-3.5 text-[#0f1930]" />
-                      <span>AI-sök</span>
-                    </span>
-                    <PillToggle
-                      checked={showEditorAiPanel}
-                      onToggle={() => switchEditorSearchMode(!showEditorAiPanel)}
-                      ariaLabel="AI-sök i ändra sökning"
-                      className="h-6 w-10"
-                    />
-                  </div>
-                </div>
-
-                <form className="mt-6 space-y-6" onSubmit={submitEditorSearch}>
+                <form className="space-y-6" onSubmit={submitEditorSearch}>
                   <div className="transition-opacity duration-200" style={{ opacity: editorModeOpacity }}>
                   {showEditorAiPanel ? (
-                    <div className="space-y-4 rounded-2xl border border-black/10 p-5">
-                      <div className="inline-flex items-center gap-2">
-                        <SparklesIcon className="h-3.5 w-3.5 text-[#0f1930]" />
-                        <span className="text-xs font-semibold uppercase tracking-wide text-ink-700">AI-sök</span>
-                      </div>
-                      <p className="text-sm text-ink-700">Beskriv lokalen du söker med naturligt språk så föreslår AI filter och relevanta träffar.</p>
-                      <textarea
-                        value={editorAiPrompt}
-                        onChange={(event) => setEditorAiPrompt(event.target.value)}
-                        className={`${heroInputClass} min-h-28`}
-                        placeholder="Exempel: Vi är 15 personer och söker möblerat kontor i Vasastan med mötesrum och budget under 90 000 kr."
-                      />
-                      <div className="flex items-center justify-between pt-1">
-                        <button
-                          type="button"
-                          className="inline-flex items-center gap-2 rounded-2xl border border-black/15 bg-white px-3 py-2 text-xs font-semibold text-ink-700 hover:bg-[#eef3fa]"
-                          onClick={() => setShowEditorAiInfo(true)}
-                        >
-                          Hur fungerar AI-sök?
-                        </button>
-                        <button
-                          type="submit"
-                          className="rounded-2xl border border-[#0f1930] bg-[#0f1930] px-5 py-3 text-sm font-semibold text-white hover:bg-[#16233f]"
-                        >
-                          Sök med AI
-                        </button>
-                      </div>
-                    </div>
+                    <AiGuidedAssistant
+                      key={`editor-ai-${aiGuideResetKey}`}
+                      initialFilters={filters}
+                      districtOptions={districtOptions}
+                      listingTypes={listingTypes}
+                      amenityOptions={editorAmenityOptions}
+                      transitDistanceOptions={transitDistanceOptions}
+                      contractFlexOptions={contractFlexOptions}
+                      accessHoursOptions={accessHoursOptions}
+                      parkingTypeOptions={parkingTypeOptions}
+                      layoutTypeOptions={layoutTypeOptions}
+                      advertiserOptions={advertiserOptions}
+                      initialAmenityQuery={amenityQuery}
+                      onPreviewFilters={previewEditorAiFilters}
+                      onSubmitSearch={submitGuidedEditorAiSearch}
+                      onOpenInfo={() => setShowEditorAiInfo(true)}
+                    onResetSearch={() => {
+                      void handleResetSearchResults();
+                    }}
+                    resultCount={visibleListings.length}
+                    defaultResultCount={sortedListings.length}
+                      onShowMatches={() => {
+                        resultsTopRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+                      }}
+                      submitLabel={isAvailableListingsView ? "Visa träffar" : "Uppdatera sökning"}
+                  />
                   ) : (
                     <>
                       {showAdvancedSearchEditor ? (
@@ -1363,7 +2519,7 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
                                     key={option.value}
                                     type="button"
                                     className={`inline-flex items-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-semibold transition ${
-                                      active ? "border-[#0f1930] bg-[#0f1930] text-white" : "border-black/15 bg-white text-ink-700 hover:bg-[#eef3fa]"
+                                      active ? "border-[#0f1930] bg-[#0f1930] text-white" : "border-black/15 bg-white text-ink-700 hover:bg-white"
                                     }`}
                                     onClick={() => toggleAmenity(option.value)}
                                   >
@@ -1381,7 +2537,7 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
                         <div className="mt-5 flex items-center justify-between gap-2">
                           <button
                             type="button"
-                            className="inline-flex items-center gap-2 rounded-2xl border border-black/15 bg-white px-3 py-2 text-xs font-semibold text-ink-700 hover:bg-[#eef3fa]"
+                            className="inline-flex items-center gap-2 rounded-2xl border border-black/15 bg-white px-3 py-2 text-xs font-semibold text-ink-700 hover:bg-white"
                             onClick={() => {
                               setShowAdvancedSearchEditor((value) => !value);
                             }}
@@ -1398,7 +2554,7 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
                         <div className="mt-5 flex items-center justify-end gap-2">
                           <button
                             type="button"
-                            className="rounded-2xl border border-black/15 bg-white px-4 py-3 text-sm font-semibold text-ink-700 hover:bg-[#eef3fa]"
+                            className="rounded-2xl border border-black/15 bg-white px-4 py-3 text-sm font-semibold text-ink-700 hover:bg-white"
                             onClick={closeSearchEditorSmooth}
                           >
                             Avbryt
@@ -1416,132 +2572,58 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
             ) : null}
 
             <div className="space-y-4">
-              {!isAvailableListingsView && !showSearchEditor && showSearchSummaryCard ? (
-                <article
-                  className={`rounded-2xl border border-black/10 bg-white p-4 ${
-                    animateSearchSummaryIn ? "search-summary-dissolve-in" : ""
-                  } ${isResettingToAvailable ? "search-summary-dissolve-out" : ""}`}
-                >
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div>
-                      <p className="text-xs font-semibold uppercase tracking-wide text-ink-500">Din sökning</p>
-                      {appliedSearchMeta.aiPrompt ? (
-                        <p className="mt-1 text-sm text-ink-700">{`AI-sök: ${appliedSearchMeta.aiPrompt}`}</p>
-                      ) : null}
-                      {activeSearchChips.length > 0 ? (
-                        <div className="mt-1.5 flex flex-wrap gap-2">
-                          {activeSearchChips.map((chip) => <span key={chip} className="rounded-full border border-black/15 bg-[#f7f9fc] px-2.5 py-1 text-xs font-semibold text-ink-700">{chip}</span>)}
-                        </div>
-                      ) : null}
-                    </div>
-                    <div className="flex flex-wrap items-center justify-end gap-2">
-                      <button
-                        type="button"
-                        className="inline-flex h-[40px] items-center gap-1.5 rounded-xl border border-black/15 bg-white px-3 text-xs font-semibold text-ink-700 hover:bg-[#eef3fa]"
-                        onClick={() => {
-                          if (isGuest) {
-                            openAuthPrompt("save");
-                            return;
-                          }
-                          const activePrompt = String(appliedSearchMeta.aiPrompt || "").trim();
-                          const baseFilters = appliedSearchMeta.filters || filters;
-                          if (activePrompt) {
-                            saveAiSearch({
-                              prompt: activePrompt,
-                              filters: baseFilters
-                            });
-                            return;
-                          }
-                          void saveCurrentFilters(baseFilters);
+              {showInlineAiGuide ? (
+                <div className="grid gap-5 lg:grid-cols-[minmax(400px,460px)_minmax(0,1fr)] lg:items-start">
+                  <aside className="lg:sticky lg:top-4">
+                    <div className={isSwitchingSidePanel ? "search-editor-collapse-out" : "search-editor-expand-in"}>
+                      {sidePanelMode === "ai" ? (
+                        <AiGuidedAssistant
+                          key={`inline-ai-${aiGuideResetKey}`}
+                          initialFilters={filters}
+                          districtOptions={districtOptions}
+                          listingTypes={listingTypes}
+                          amenityOptions={editorAmenityOptions}
+                          transitDistanceOptions={transitDistanceOptions}
+                          contractFlexOptions={contractFlexOptions}
+                          accessHoursOptions={accessHoursOptions}
+                          parkingTypeOptions={parkingTypeOptions}
+                          layoutTypeOptions={layoutTypeOptions}
+                          advertiserOptions={advertiserOptions}
+                          initialAmenityQuery={amenityQuery}
+                          onPreviewFilters={previewEditorAiFilters}
+                          onSubmitSearch={submitInlineGuidedAiSearch}
+                          onOpenInfo={() => setShowEditorAiInfo(true)}
+                          onResetSearch={() => {
+                            void handleResetSearchResults();
+                          }}
+                          resultCount={visibleListings.length}
+                          defaultResultCount={sortedListings.length}
+                        onShowMatches={() => {
+                          resultsTopRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
                         }}
-                      >
-                        <SaveIcon className="h-3.5 w-3.5" />
-                        {appliedSearchMeta.aiPrompt ? "Spara AI-sökning" : "Spara sökfilter"}
-                      </button>
-                      <button
-                        type="button"
-                        className="inline-flex h-[40px] items-center gap-1.5 rounded-xl border border-black/15 bg-white px-3 text-xs font-semibold text-ink-700 hover:bg-[#eef3fa]"
-                        onClick={() => {
-                          void handleResetSearchResults();
-                        }}
-                      >
-                        <ResetIcon className="h-3.5 w-3.5" />
-                        Nollställ
-                      </button>
-                      <button
-                        type="button"
-                        className="inline-flex h-[40px] items-center rounded-xl border border-black/15 bg-white px-3 text-xs font-semibold text-ink-700 hover:bg-[#eef3fa]"
-                        onClick={openExpandedSearchEditor}
-                      >
-                        Redigera sökning
-                      </button>
+                        submitLabel="Uppdatera sökning"
+                        showHeader={false}
+                        suggestionChipLabel={displayedAiSuggestionLabel}
+                        showModeSwitch
+                        filterModeActive={!showEditorAiPanel}
+                        onToggleFilterMode={handleFilterSearchToggle}
+                        />
+                      ) : (
+                        sideFilterPanel
+                      )}
                     </div>
-                  </div>
-                </article>
-              ) : null}
+                  </aside>
 
-              {showMap ? (
-                <div className="space-y-2">
-                  <GoogleListingsMap listings={visibleListings} onMarkerClick={openListingDetail} dense />
-                  <p className="inline-flex items-center gap-1.5 text-xs text-ink-600"><MapIcon className="h-3.5 w-3.5" />Google Maps visas med enkla markörer. Klicka på en markör för att öppna objektet.</p>
-                </div>
-              ) : null}
-
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="inline-flex items-center gap-1.5 rounded-2xl border border-black/10 bg-white px-3 py-2 text-xs font-semibold text-ink-700">
-                  <BuildingIcon className="h-3.5 w-3.5 text-ink-600" />
-                  {visibleListings.length} träffar
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    className="inline-flex min-h-[40px] items-center gap-2 rounded-xl border border-black/15 bg-white px-3 text-xs font-semibold text-ink-700 hover:bg-[#f7f9fc]"
-                    onClick={() => setShowMap((value) => !value)}
-                    aria-pressed={showMap}
-                    aria-label="Visa karta"
-                  >
-                    <MapIcon className="h-3.5 w-3.5 text-ink-700" />
-                    <span>Karta</span>
-                    <span
-                      aria-hidden="true"
-                      className={`inline-flex h-6 w-10 items-center rounded-full p-0.5 transition-colors ${
-                        showMap ? "justify-end bg-[#0f1930]" : "justify-start bg-[#a8adb3]"
-                      }`}
-                    >
-                      <span className="h-5 w-5 rounded-full bg-white shadow-[0_1px_2px_rgba(15,25,48,0.35)]" />
-                    </span>
-                  </button>
-                  <div className="inline-flex items-center gap-2">
-                    <label className="text-xs font-semibold text-ink-700">Sortera</label>
-                    <select
-                      className="select-chevron min-h-[40px] min-w-[132px] rounded-xl border border-black/15 bg-white px-4 text-xs font-semibold text-ink-800 focus:border-[#0f1930] focus:outline-none"
-                      value={sortBy}
-                      onChange={(event) => setSortBy(event.target.value)}
-                    >
-                      <option value="relevance">Relevans</option>
-                      <option value="price_asc">Hyra: lägst först</option>
-                      <option value="price_desc">Hyra: högst först</option>
-                      <option value="size_asc">Yta: minst först</option>
-                      <option value="size_desc">Yta: störst först</option>
-                    </select>
+                  <div className="space-y-4">
+                    {preferencesSummaryCard}
+                    {resultsContent}
                   </div>
                 </div>
-              </div>
-
-              {visibleListings.length === 0 ? (
-                <div className="rounded-3xl border border-black/10 bg-white p-10 text-center text-sm text-ink-500">Inga objekt matchar din sökning just nu.</div>
               ) : (
-                <div className="grid items-start gap-4 lg:grid-cols-2">
-                  {visibleListings.map((listing) => (
-                    <ListingVisualCard
-                      key={listing.id}
-                      listing={listing}
-                      shortlisted={favoriteIds.has(listing.id)}
-                      onOpenListing={openListingDetail}
-                      onToggleShortlist={handleToggleShortlist}
-                    />
-                  ))}
-                </div>
+                <>
+                  {preferencesSummaryCard}
+                  {resultsContent}
+                </>
               )}
             </div>
           </div>
@@ -1564,7 +2646,7 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
           <div className="relative w-full max-w-lg rounded-2xl border border-black/10 bg-white p-5 shadow-[0_24px_64px_rgba(15,25,48,0.28)]" onClick={(event) => event.stopPropagation()}>
             <button
               type="button"
-              className="absolute right-3 top-3 inline-flex h-9 w-9 min-h-9 min-w-9 aspect-square items-center justify-center rounded-full border border-black/15 p-0 text-lg font-semibold leading-none text-ink-700 hover:bg-[#f3f6fb]"
+              className="absolute right-3 top-3 inline-flex h-9 w-9 min-h-9 min-w-9 aspect-square items-center justify-center rounded-full border border-black/15 p-0 text-lg font-semibold leading-none text-ink-700 hover:bg-white"
               onClick={() => setShowEditorAiInfo(false)}
               aria-label="Stäng"
             >

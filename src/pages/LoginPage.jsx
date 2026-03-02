@@ -56,7 +56,7 @@ function LoginPage({ onLogin }) {
           <button type="button" className="text-ink-600 underline" onClick={() => navigateTo("/signup")}>Skapa konto</button>
         </div>
 
-        <div className="rounded-2xl border border-black/10 bg-[#f8fafc] p-3 text-xs text-ink-600">
+        <div className="rounded-2xl border border-black/10 bg-white p-3 text-xs text-ink-600">
           Demo-konton: <br />
           Hyresgäst: hyresgast@demo.se / demo123<br />
           Annonsör: annonsor@demo.se / demo123<br />

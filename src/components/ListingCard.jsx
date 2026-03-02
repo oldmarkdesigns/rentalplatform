@@ -37,10 +37,10 @@ function ListingCard({ listing, shortlisted, onOpen, onToggleShortlist }) {
         </div>
 
         <div className="grid grid-cols-2 gap-2 text-xs text-ink-700">
-          <div className="rounded-xl bg-ink-50 px-2 py-2">{formatSek(listing.priceMonthly)} / månad</div>
-          <div className="rounded-xl bg-ink-50 px-2 py-2">{listing.sizeSqm} kvm</div>
-          <div className="rounded-xl bg-ink-50 px-2 py-2">{listing.capacity} platser</div>
-          <div className="rounded-xl bg-ink-50 px-2 py-2">Svar inom {listing.responseHours}h</div>
+          <div className="rounded-xl bg-white px-2 py-2">{formatSek(listing.priceMonthly)} / månad</div>
+          <div className="rounded-xl bg-white px-2 py-2">{listing.sizeSqm} kvm</div>
+          <div className="rounded-xl bg-white px-2 py-2">{listing.capacity} platser</div>
+          <div className="rounded-xl bg-white px-2 py-2">Svar inom {listing.responseHours}h</div>
         </div>
 
         <div className="flex flex-wrap gap-2">

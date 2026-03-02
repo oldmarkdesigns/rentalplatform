@@ -64,7 +64,7 @@ function SignupPage({ onSignup }) {
             onClick={() => setRoleSelection("renter")}
             className={`inline-flex items-center gap-2 rounded-2xl border px-3 py-2 text-sm font-semibold ${
               form.roles.length === 1 && form.roles[0] === "renter"
-                ? "border-[#0f1930] bg-[#eef3fb] text-[#0f1930]"
+                ? "border-[#0f1930] bg-white text-[#0f1930]"
                 : "border-black/20 bg-white text-ink-700"
             }`}
           >
@@ -80,7 +80,7 @@ function SignupPage({ onSignup }) {
             onClick={() => setRoleSelection("publisher")}
             className={`inline-flex items-center gap-2 rounded-2xl border px-3 py-2 text-sm font-semibold ${
               form.roles.length === 1 && form.roles[0] === "publisher"
-                ? "border-[#0f1930] bg-[#eef3fb] text-[#0f1930]"
+                ? "border-[#0f1930] bg-white text-[#0f1930]"
                 : "border-black/20 bg-white text-ink-700"
             }`}
           >
@@ -96,7 +96,7 @@ function SignupPage({ onSignup }) {
             onClick={() => setRoleSelection("both")}
             className={`inline-flex items-center gap-2 rounded-2xl border px-3 py-2 text-sm font-semibold ${
               form.roles.length === 2
-                ? "border-[#0f1930] bg-[#eef3fb] text-[#0f1930]"
+                ? "border-[#0f1930] bg-white text-[#0f1930]"
                 : "border-black/20 bg-white text-ink-700"
             }`}
           >

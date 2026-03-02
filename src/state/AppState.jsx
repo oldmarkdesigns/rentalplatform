@@ -440,7 +440,7 @@ export function AppProvider({ children }) {
       state: exists ? "removed" : "added"
     });
 
-    pushToast(exists ? "Favorit borttagen." : "Favorit sparad.", "success");
+    pushToast(exists ? "Sparat objekt borttaget." : "Objekt sparat.", "success");
   }
 
   async function requestViewing(payload) {

@@ -77,7 +77,7 @@ function OnboardingPage({ user, onComplete }) {
           ))}
         </div>
 
-        <div className="rounded-3xl border border-black/10 bg-[#f8fafc] p-4 sm:p-5">
+        <div className="rounded-3xl border border-black/10 bg-white p-4 sm:p-5">
           {step === 0 ? (
             <div className="space-y-3">
               <p className="text-sm text-ink-700">Vad vill du göra primärt i plattformen?</p>

@@ -91,6 +91,19 @@ export function CardsIcon({ className }) {
   );
 }
 
+export function ListIcon({ className }) {
+  return (
+    <IconBase className={className}>
+      <path d="M8 6.5h12" />
+      <path d="M8 12h12" />
+      <path d="M8 17.5h12" />
+      <circle cx="4.5" cy="6.5" r="1" fill="currentColor" stroke="none" />
+      <circle cx="4.5" cy="12" r="1" fill="currentColor" stroke="none" />
+      <circle cx="4.5" cy="17.5" r="1" fill="currentColor" stroke="none" />
+    </IconBase>
+  );
+}
+
 export function BuildingIcon({ className }) {
   return (
     <IconBase className={className}>
@@ -371,6 +384,49 @@ export function ExternalLinkIcon({ className }) {
       <path d="M14 5h5v5" />
       <path d="M10 14L19 5" />
       <path d="M19 13v5a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h5" />
+    </IconBase>
+  );
+}
+
+export function PdfIcon({ className }) {
+  return (
+    <IconBase className={className}>
+      <path d="M6 3h9l4 4v14H6z" />
+      <path d="M15 3v5h4" />
+      <path d="M8.5 15h1.8a1.7 1.7 0 0 0 0-3.4H8.5V17" />
+      <path d="M13 11.6h1.2a1.7 1.7 0 0 1 0 3.4H13z" />
+      <path d="M16.8 11.6h2.7" />
+      <path d="M16.8 13.3h2.2" />
+    </IconBase>
+  );
+}
+
+export function ShareIcon({ className }) {
+  return (
+    <IconBase className={className}>
+      <circle cx="6" cy="12" r="2" />
+      <circle cx="18" cy="6" r="2" />
+      <circle cx="18" cy="18" r="2" />
+      <path d="M8 11l8-4" />
+      <path d="M8 13l8 4" />
+    </IconBase>
+  );
+}
+
+export function ArrowLeftIcon({ className }) {
+  return (
+    <IconBase className={className}>
+      <path d="M19 12H5" />
+      <path d="M10 7l-5 5 5 5" />
+    </IconBase>
+  );
+}
+
+export function ArrowRightIcon({ className }) {
+  return (
+    <IconBase className={className}>
+      <path d="M5 12h14" />
+      <path d="M14 7l5 5-5 5" />
     </IconBase>
   );
 }

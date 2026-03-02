@@ -29,7 +29,7 @@ body {
 }
 
 .navbar-enter {
-  animation: navbar-slide-in 280ms ease-out both;
+  animation: none;
 }
 
 .reveal-init {
@@ -50,17 +50,6 @@ body {
   }
   to {
     opacity: 1;
-  }
-}
-
-@keyframes navbar-slide-in {
-  from {
-    opacity: 0;
-    transform: translateY(-14px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
   }
 }
 
@@ -169,6 +158,16 @@ input[type="checkbox"] {
   accent-color: #0f1930;
   width: 18px;
   height: 18px;
+}
+
+input[type="number"] {
+  -moz-appearance: textfield;
+}
+
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
 }
 
 .search-flag-checkbox {

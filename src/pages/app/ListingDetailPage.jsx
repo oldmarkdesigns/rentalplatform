@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import ListingVisualCard from "../../components/app/ListingVisualCard";
 import Breadcrumbs from "../../components/layout/Breadcrumbs";
 import { formatSek } from "../../lib/formatters";
 import { normalizePopularListingFallback, popularListingFallbackKey } from "../../lib/popularListingFallback";
 import { navigateTo } from "../../lib/router";
 import {
+  ArrowLeftIcon,
   BalconyIcon,
   BikeIcon,
   BuildingIcon,
@@ -15,16 +17,18 @@ import {
   LockerIcon,
   LoungeIcon,
   PenthouseIcon,
+  PdfIcon,
   PinIcon,
   RooftopIcon,
   RulerIcon,
+  ShareIcon,
   ShieldIcon,
   SnowflakeIcon,
+  StarIcon,
   UserIcon,
   UtensilsIcon,
   WifiIcon
 } from "../../components/icons/UiIcons";
-import ListingVisualCard from "../../components/app/ListingVisualCard";
 
 const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
 const GOOGLE_MAPS_SCRIPT_ID = "google-maps-listing-detail-script";
@@ -68,6 +72,29 @@ const districtInsights = {
   }
 };
 
+const amenityDefinitions = [
+  { label: "Cykelförråd", icon: BikeIcon, aliases: ["cykelförråd", "cykelrum", "cykel"] },
+  { label: "Garage", icon: CarIcon, aliases: ["garage"] },
+  { label: "Kök", icon: UtensilsIcon, aliases: ["kök", "kitchen"] },
+  { label: "Mötesrum", icon: BuildingIcon, aliases: ["mötesrum", "konferensrum", "styrelserum"] },
+  { label: "Fiber", icon: WifiIcon, aliases: ["fiber", "wifi", "internet"] },
+  { label: "Reception", icon: UserIcon, aliases: ["reception", "väntrum", "waiting room"] },
+  { label: "Balkong", icon: BalconyIcon, aliases: ["balkong", "balcony"] },
+  { label: "Takterrass", icon: RooftopIcon, aliases: ["takterrass", "terrass", "roof terrace", "terrace"] },
+  { label: "Takvåning", icon: PenthouseIcon, aliases: ["takvåning", "penthouse"] },
+  { label: "Gym", icon: DumbbellIcon, aliases: ["gym", "fitness", "träning"] },
+  { label: "Omklädningsrum", icon: LockerIcon, aliases: ["omklädningsrum", "omklädning", "locker room"] },
+  { label: "Air condition", icon: SnowflakeIcon, aliases: ["air condition", "ac", "a/c", "luftkonditionering"] },
+  { label: "Lounge", icon: LoungeIcon, aliases: ["lounge", "sociala ytor", "social yta"] },
+  { label: "Förråd", icon: LockerIcon, aliases: ["förråd", "förrad", "storage", "lager"] },
+  { label: "Lastzon", icon: CarIcon, aliases: ["lastzon", "lastkaj", "loading zone"] },
+  { label: "Telefonbås", icon: BuildingIcon, aliases: ["telefonbås", "telefonrum", "phone booth"] },
+  { label: "Väntrum", icon: UserIcon, aliases: ["väntrum"] },
+  { label: "Pentry", icon: UtensilsIcon, aliases: ["pentry", "pantry"] },
+  { label: "Skyltfönster", icon: BuildingIcon, aliases: ["skyltfönster", "storefront"] },
+  { label: "Säkerhetsdörr", icon: ShieldIcon, aliases: ["säkerhetsdörr", "säkerhet", "security", "secure"] }
+];
+
 function getDistrictInsight(district) {
   return districtInsights[district] || {
     center: { lat: 59.3293, lng: 18.0686 },
@@ -88,9 +115,7 @@ function loadGoogleMaps(apiKey) {
 
   window.__googleMapsListingDetailPromise = new Promise((resolve, reject) => {
     const existingScript = document.getElementById(GOOGLE_MAPS_SCRIPT_ID);
-    if (existingScript) {
-      existingScript.remove();
-    }
+    if (existingScript) existingScript.remove();
 
     const previousAuthFailure = window.gm_authFailure;
     const timeoutId = window.setTimeout(() => {
@@ -114,11 +139,8 @@ function loadGoogleMaps(apiKey) {
     script.defer = true;
     script.onload = () => {
       cleanup();
-      if (window.google?.maps) {
-        resolve(window.google.maps);
-      } else {
-        reject(new Error("Google Maps SDK kunde inte initieras."));
-      }
+      if (window.google?.maps) resolve(window.google.maps);
+      else reject(new Error("Google Maps SDK kunde inte initieras."));
     };
     script.onerror = () => {
       cleanup();
@@ -189,7 +211,7 @@ function ListingAreaGoogleMap({ lat, lng, title }) {
   }, [lat, lng, title]);
 
   return (
-    <div className="relative h-80 w-full overflow-hidden rounded-2xl border border-black/10 bg-[#dbe8f6]">
+    <div className="relative h-80 w-full overflow-hidden rounded-2xl border border-black/10 bg-white">
       <div ref={containerRef} className="absolute inset-0" />
       {status === "loading" ? (
         <div className="absolute inset-0 grid place-items-center bg-white/55 text-xs font-semibold text-ink-700">Laddar karta...</div>
@@ -202,6 +224,68 @@ function ListingAreaGoogleMap({ lat, lng, title }) {
       {status === "error" ? (
         <div className="absolute inset-0 grid place-items-center bg-white/70 px-4 text-center text-xs font-semibold text-rose-700">
           Google Maps kunde inte laddas.
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function ListingStreetView({ lat, lng }) {
+  const containerRef = useRef(null);
+  const panoramaRef = useRef(null);
+  const [status, setStatus] = useState("loading");
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function setup() {
+      if (!GOOGLE_MAPS_API_KEY) {
+        setStatus("missing_key");
+        return;
+      }
+      try {
+        const maps = await loadGoogleMaps(GOOGLE_MAPS_API_KEY);
+        if (cancelled || !containerRef.current) return;
+        const center = { lat, lng };
+        if (!panoramaRef.current) {
+          panoramaRef.current = new maps.StreetViewPanorama(containerRef.current, {
+            position: center,
+            pov: { heading: 40, pitch: 0 },
+            zoom: 1,
+            addressControl: false,
+            fullscreenControl: true,
+            linksControl: true,
+            panControl: true
+          });
+        } else {
+          panoramaRef.current.setPosition(center);
+        }
+        setStatus("ready");
+      } catch {
+        if (!cancelled) setStatus("error");
+      }
+    }
+
+    setup();
+    return () => {
+      cancelled = true;
+    };
+  }, [lat, lng]);
+
+  return (
+    <div className="relative h-[62vh] min-h-[420px] w-full overflow-hidden rounded-2xl border border-black/10 bg-white">
+      <div ref={containerRef} className="absolute inset-0" />
+      {status === "loading" ? (
+        <div className="absolute inset-0 grid place-items-center bg-white/55 text-xs font-semibold text-ink-700">Laddar gatuvy...</div>
+      ) : null}
+      {status === "missing_key" ? (
+        <div className="absolute inset-0 grid place-items-center bg-white/70 px-4 text-center text-xs font-semibold text-rose-700">
+          Google Maps API-nyckel saknas.
+        </div>
+      ) : null}
+      {status === "error" ? (
+        <div className="absolute inset-0 grid place-items-center bg-white/70 px-4 text-center text-xs font-semibold text-rose-700">
+          Gatuvy kunde inte laddas här.
         </div>
       ) : null}
     </div>
@@ -224,6 +308,14 @@ function inferAmenitiesFromText(text) {
   return Array.from(new Set(inferred));
 }
 
+function normalizeAmenityLabel(value) {
+  const normalized = String(value || "").trim().toLowerCase();
+  if (!normalized) return null;
+  const definition = amenityDefinitions.find((item) => item.label.toLowerCase() === normalized
+    || item.aliases.some((alias) => normalized.includes(alias)));
+  return definition ? definition.label : String(value || "").trim();
+}
+
 function buildDisplayAmenities(listing) {
   const blocked = new Set([
     "extern källa",
@@ -243,10 +335,10 @@ function buildDisplayAmenities(listing) {
     .map((item) => String(item || "").trim())
     .filter(Boolean)
     .filter((item) => !blocked.has(item.toLowerCase()));
-
-  if (sanitized.length > 0) {
-    return Array.from(new Set(sanitized)).slice(0, 8);
-  }
+  const normalizedSanitized = sanitized
+    .map((item) => normalizeAmenityLabel(item))
+    .filter(Boolean);
+  if (normalizedSanitized.length > 0) return Array.from(new Set(normalizedSanitized)).slice(0, 8);
 
   const inferred = inferAmenitiesFromText(
     [listing?.description, listing?.type, listing?.tags?.join(" "), listing?.title]
@@ -271,26 +363,28 @@ function buildLongDescription(listing, insight, amenities) {
 }
 
 function amenityIconFor(amenity) {
-  const normalized = String(amenity || "").toLowerCase();
-  if (normalized.includes("cykel")) return BikeIcon;
-  if (normalized.includes("garage") || normalized.includes("park")) return CarIcon;
-  if (normalized.includes("kök") || normalized.includes("pentry") || normalized.includes("kaffe")) return UtensilsIcon;
-  if (normalized.includes("möte") || normalized.includes("styrelse") || normalized.includes("kontor")) return BuildingIcon;
-  if (normalized.includes("fiber") || normalized.includes("wifi")) return WifiIcon;
-  if (normalized.includes("reception") || normalized.includes("väntrum")) return UserIcon;
-  if (normalized.includes("balkong")) return BalconyIcon;
-  if (normalized.includes("takterrass")) return RooftopIcon;
-  if (normalized.includes("takvåning")) return PenthouseIcon;
-  if (normalized.includes("gym")) return DumbbellIcon;
-  if (normalized.includes("omklädning") || normalized.includes("förråd") || normalized.includes("lager")) return LockerIcon;
-  if (normalized.includes("air condition") || normalized.includes("ac") || normalized.includes("dusch")) return SnowflakeIcon;
-  if (normalized.includes("lounge") || normalized.includes("telefonbås")) return LoungeIcon;
-  if (normalized.includes("säker")) return ShieldIcon;
+  const normalized = String(amenity || "").trim().toLowerCase();
+  const definition = amenityDefinitions.find((item) => item.label.toLowerCase() === normalized
+    || item.aliases.some((alias) => normalized.includes(alias)));
+  if (definition) return definition.icon;
   return BuildingIcon;
 }
 
-function ListingDetailPage({ app, listingId, isGuest = false, onRequireAuth }) {
+function ListingDetailPage({ app, listingId, isGuest = false, onRequireAuth, initialView = "detail" }) {
   const pageRef = useRef(null);
+  const [galleryTab, setGalleryTab] = useState("images");
+  const [areaViewMode, setAreaViewMode] = useState("map");
+  const isGalleryView = initialView === "gallery";
+  const source = useMemo(() => {
+    if (typeof window === "undefined") return "search";
+    const params = new URLSearchParams(window.location.search);
+    return params.get("source") === "available" ? "available" : "search";
+  }, [listingId, isGalleryView]);
+  const backHref = source === "available" ? "/app/rent?view=available" : "/app/rent?run=1";
+  const backLabel = source === "available" ? "Tillbaka till lediga lokaler" : "Tillbaka till sökresultat";
+  const detailHref = `/app/listings/${encodeURIComponent(listingId)}?source=${source}`;
+  const galleryHref = `/app/listings/${encodeURIComponent(listingId)}/gallery?source=${source}`;
+
   const listing = useMemo(() => {
     const existing = app.listings.find((item) => String(item.id) === String(listingId));
     if (existing) return existing;
@@ -298,41 +392,91 @@ function ListingDetailPage({ app, listingId, isGuest = false, onRequireAuth }) {
     try {
       const raw = window.sessionStorage.getItem(popularListingFallbackKey(listingId));
       if (!raw) return null;
-      const parsed = JSON.parse(raw);
-      return normalizePopularListingFallback(parsed);
+      return normalizePopularListingFallback(JSON.parse(raw));
     } catch {
       return null;
     }
   }, [app.listings, listingId]);
+
   const similarListings = useMemo(() => {
     if (!listing) return [];
     const sameDistrict = app.listings.filter((item) => item.id !== listing.id && item.district === listing.district);
     const remaining = app.listings.filter((item) => item.id !== listing.id && item.district !== listing.district);
-    return [...sameDistrict, ...remaining].slice(0, 4);
+    return [...sameDistrict, ...remaining].slice(0, 6);
   }, [app.listings, listing]);
+
   const insight = useMemo(() => getDistrictInsight(listing?.district), [listing?.district]);
   const displayAmenities = useMemo(() => (listing ? buildDisplayAmenities(listing) : []), [listing]);
   const longDescription = useMemo(() => (listing ? buildLongDescription(listing, insight, displayAmenities) : []), [listing, insight, displayAmenities]);
+
   const googleMapsHref = useMemo(
     () => `https://www.google.com/maps?q=${encodeURIComponent(`${insight.center.lat},${insight.center.lng}`)}`,
     [insight.center.lat, insight.center.lng]
   );
 
+  const isSaved = useMemo(
+    () => Boolean((app.favorites || []).some((entry) => String(entry.listingId) === String(listing?.id))),
+    [app.favorites, listing?.id]
+  );
+
+  const images = useMemo(() => {
+    if (!listing) return [];
+    return Array.isArray(listing.images) && listing.images.length > 0
+      ? listing.images
+      : [listing.image || "/object-images/object-1.jpeg"];
+  }, [listing]);
+
+  useEffect(() => {
+    setGalleryTab("images");
+    setAreaViewMode("map");
+  }, [listingId, isGalleryView]);
+
   useEffect(() => {
     const container = pageRef.current;
-    if (container) {
-      container.scrollTo({ top: 0, behavior: "auto" });
-    } else {
-      window.scrollTo({ top: 0, behavior: "auto" });
+    if (container) container.scrollTo({ top: 0, behavior: "auto" });
+    else window.scrollTo({ top: 0, behavior: "auto" });
+  }, [listingId, isGalleryView]);
+
+  const actionButtonClass = "inline-flex min-h-[40px] items-center gap-1.5 rounded-xl border border-black/15 bg-white px-3 text-xs font-semibold text-ink-700 hover:bg-white";
+
+  function handleToggleSave() {
+    if (!listing?.id) return;
+    if (isGuest) {
+      onRequireAuth?.("login", "renter");
+      return;
     }
-  }, [listingId]);
+    app.toggleFavorite?.(listing.id);
+  }
+
+  function handleExportPdf() {
+    window.print();
+  }
+
+  async function handleShare() {
+    if (!listing?.id) return;
+    const shareUrl = `${window.location.origin}/app/listings/${encodeURIComponent(listing.id)}`;
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: listing.title,
+          text: `${listing.title} • ${listing.district}`,
+          url: shareUrl
+        });
+      } else {
+        await navigator.clipboard.writeText(shareUrl);
+        app.pushToast("Länk kopierad.", "success");
+      }
+    } catch {
+      app.pushToast("Delning avbröts.", "info");
+    }
+  }
 
   if (!listing) {
     return (
       <section ref={pageRef} className="h-full overflow-y-auto">
         <div className="mx-auto w-full max-w-6xl p-6">
-          <button type="button" className="rounded-xl border border-black/15 bg-white px-3 py-2 text-xs font-semibold text-ink-700" onClick={() => navigateTo("/app/rent")}>
-            Tillbaka till sökresultat
+          <button type="button" className={actionButtonClass} onClick={() => navigateTo(backHref)}>
+            {backLabel}
           </button>
           <div className="mt-4 rounded-2xl border border-black/10 bg-white p-6">
             <h1 className="text-2xl font-semibold">Objektet hittades inte</h1>
@@ -343,9 +487,90 @@ function ListingDetailPage({ app, listingId, isGuest = false, onRequireAuth }) {
     );
   }
 
-  const images = Array.isArray(listing.images) && listing.images.length > 0
-    ? listing.images
-    : [listing.image || "/object-images/object-1.jpeg"];
+  if (isGalleryView) {
+    return (
+      <section ref={pageRef} className="h-full overflow-y-auto bg-white">
+        <div className="mx-auto w-full max-w-7xl p-4 sm:p-6">
+          <div className="grid grid-cols-1 items-center gap-3 border-b border-black/10 pb-3 sm:grid-cols-[1fr_auto_1fr]">
+            <button
+              type="button"
+              className="inline-flex min-h-[40px] items-center gap-1.5 justify-self-start text-xs font-semibold text-ink-700 hover:text-black"
+              onClick={() => navigateTo(detailHref)}
+            >
+              <ArrowLeftIcon className="h-4 w-4" />
+              Tillbaka
+            </button>
+
+            <div className="inline-flex items-center justify-center gap-6 justify-self-center">
+              <button
+                type="button"
+                className={`border-b-2 pb-0.5 text-xs font-semibold transition ${
+                  galleryTab === "images"
+                    ? "border-[#0f1930] text-[#0f1930]"
+                    : "border-transparent text-ink-600 hover:text-black"
+                }`}
+                onClick={() => setGalleryTab("images")}
+              >
+                Bilder
+              </button>
+              <button
+                type="button"
+                className={`border-b-2 pb-0.5 text-xs font-semibold transition ${
+                  galleryTab === "street"
+                    ? "border-[#0f1930] text-[#0f1930]"
+                    : "border-transparent text-ink-600 hover:text-black"
+                }`}
+                onClick={() => setGalleryTab("street")}
+              >
+                Gatuvy
+              </button>
+            </div>
+
+            <div className="flex flex-wrap items-center justify-start gap-2 sm:justify-end">
+              <button type="button" className={actionButtonClass} onClick={handleExportPdf}>
+                <PdfIcon className="h-3.5 w-3.5" />
+                PDF
+              </button>
+              <button type="button" className={actionButtonClass} onClick={handleToggleSave}>
+                <StarIcon className={`h-3.5 w-3.5 ${isSaved ? "fill-current text-[#0f1930]" : ""}`} />
+                {isSaved ? "Sparad" : "Spara"}
+              </button>
+              <button type="button" className={actionButtonClass} onClick={handleShare}>
+                <ShareIcon className="h-3.5 w-3.5" />
+                Dela
+              </button>
+            </div>
+          </div>
+
+          <div className="mt-4">
+            {galleryTab === "images" ? (
+              <div className="grid gap-3 sm:grid-cols-2">
+                {images.map((image, index) => (
+                  <div key={`${image}-${index}`} className="overflow-hidden rounded-2xl border border-black/10 bg-white">
+                    <img src={image} alt={`${listing.title} ${index + 1}`} className="h-[340px] w-full object-cover sm:h-[420px]" />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <ListingStreetView lat={insight.center.lat} lng={insight.center.lng} />
+                <a
+                  href={googleMapsHref}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-black/15 bg-white px-3 py-2 text-xs font-semibold text-ink-700 hover:bg-white"
+                >
+                  Öppna i Google Maps
+                  <ExternalLinkIcon className="h-3.5 w-3.5" />
+                </a>
+              </div>
+            )}
+          </div>
+
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section ref={pageRef} className="h-full overflow-y-auto">
@@ -354,158 +579,232 @@ function ListingDetailPage({ app, listingId, isGuest = false, onRequireAuth }) {
           className="mb-2"
           items={[
             { label: "Startsida", to: "/" },
-            { label: "Sökresultat", to: "/app/rent?run=1" },
+            { label: source === "available" ? "Lediga lokaler" : "Sökresultat", to: backHref },
             { label: listing.title }
           ]}
         />
 
         <div className="mt-4 space-y-4">
-            <h1 className="text-3xl font-semibold">{listing.title}</h1>
-            <p className="mt-2 inline-flex items-center gap-1.5 text-sm text-ink-500">
-              <PinIcon className="h-4 w-4" />
-              {listing.district} • {listing.address}
-            </p>
-
-            <img src={images[0]} alt={listing.title} className="mt-4 h-72 w-full rounded-2xl object-cover sm:h-[460px]" />
-            <div className="mt-3 grid grid-cols-4 gap-2">
-              {images.slice(0, 4).map((image, index) => (
-                <img key={`${image}-${index}`} src={image} alt={`${listing.title} ${index + 1}`} className="h-20 w-full rounded-xl border border-black/10 object-cover" />
-              ))}
+          <button
+            type="button"
+            className="inline-flex min-h-[40px] items-center gap-1.5 text-xs font-semibold text-ink-700 hover:text-black"
+            onClick={() => navigateTo(backHref)}
+          >
+            <ArrowLeftIcon className="h-4 w-4" />
+            {backLabel}
+          </button>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h1 className="text-3xl font-semibold">{listing.title}</h1>
+              <p className="mt-2 inline-flex items-center gap-1.5 text-sm text-ink-500">
+                <PinIcon className="h-4 w-4" />
+                {listing.district} • {listing.address}
+              </p>
             </div>
-
-            <div className="mt-4 grid gap-4 lg:grid-cols-2">
-              <article className="flex h-full flex-col rounded-2xl border border-black/10 bg-white p-4">
-                <p className="text-3xl font-semibold">{formatSek(listing.priceMonthly)} /månad</p>
-                <p className="mt-1 text-sm text-ink-500">Hyresperiod: {listing.term || "6-24 månader"}</p>
-
-                <h3 className="mt-5 text-lg font-semibold">Bekvämligheter</h3>
-                <ul className="mt-2 grid gap-2 sm:grid-cols-2">
-                  {displayAmenities.map((amenity) => {
-                    const Icon = amenityIconFor(amenity);
-                    return (
-                      <li key={amenity} className="inline-flex items-center gap-2 rounded-xl border border-black/10 bg-[#f8fafc] px-3 py-2 text-sm text-ink-700">
-                        <Icon className="h-4 w-4 text-ink-500" />
-                        {amenity}
-                      </li>
-                    );
-                  })}
-                </ul>
-
-                <div className="mt-auto space-y-2 pt-5">
-                  <button
-                    type="button"
-                    className="w-full rounded-2xl border border-[#0f1930] bg-[#0f1930] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#16233f]"
-                    onClick={() => {
-                      if (isGuest) {
-                        onRequireAuth?.("signup", "renter");
-                        return;
-                      }
-                      app.pushToast("Kontaktförfrågan skickad till annonsör.", "success");
-                    }}
-                  >
-                    Kontakta uthyrare
-                  </button>
-                  <button
-                    type="button"
-                    className="w-full rounded-2xl border border-black/15 bg-white px-4 py-2.5 text-sm font-semibold text-ink-700 hover:bg-[#eef3fa]"
-                    onClick={() => {
-                      if (isGuest) {
-                        onRequireAuth?.("signup", "renter");
-                        return;
-                      }
-                      app.pushToast("Visningsförfrågan skickad.", "success");
-                    }}
-                  >
-                    Boka visning
-                  </button>
-                </div>
-              </article>
-
-              <article className="rounded-2xl border border-black/10 bg-white p-4">
-                <h3 className="text-lg font-semibold">Snabbfakta</h3>
-                <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                  <div className="inline-flex items-center gap-2 rounded-xl border border-black/10 bg-[#f8fafc] px-3 py-2 text-sm text-ink-700">
-                    <CoinsIcon className="h-4 w-4 text-ink-500" />
-                    {formatSek(listing.priceMonthly)} / månad
-                  </div>
-                  <div className="inline-flex items-center gap-2 rounded-xl border border-black/10 bg-[#f8fafc] px-3 py-2 text-sm text-ink-700">
-                    <RulerIcon className="h-4 w-4 text-ink-500" />
-                    {listing.sizeSqm} kvm
-                  </div>
-                  <div className="inline-flex items-center gap-2 rounded-xl border border-black/10 bg-[#f8fafc] px-3 py-2 text-sm text-ink-700">
-                    <UserIcon className="h-4 w-4 text-ink-500" />
-                    {listing.capacity} platser
-                  </div>
-                  <div className="inline-flex items-center gap-2 rounded-xl border border-black/10 bg-[#f8fafc] px-3 py-2 text-sm text-ink-700">
-                    <ClockIcon className="h-4 w-4 text-ink-500" />
-                    Svarstid cirka {listing.responseHours}h
-                  </div>
-                </div>
-
-                <h3 className="mt-5 text-lg font-semibold">Kommunikation & service i området</h3>
-                <div className="mt-3 grid gap-3 md:grid-cols-2">
-                  <div className="rounded-xl border border-black/10 bg-[#f8fafc] p-3">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-ink-500">Kommunaltrafik</p>
-                    <ul className="mt-2 space-y-1 text-sm text-ink-700">
-                      {insight.transit.map((item) => (
-                        <li key={item}>• {item}</li>
-                      ))}
-                    </ul>
-                  </div>
-                  <div className="rounded-xl border border-black/10 bg-[#f8fafc] p-3">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-ink-500">Närområde</p>
-                    <ul className="mt-2 space-y-1 text-sm text-ink-700">
-                      {insight.services.map((item) => (
-                        <li key={item}>• {item}</li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-              </article>
+            <div className="flex flex-wrap items-center gap-2">
+              <button type="button" className={actionButtonClass} onClick={handleExportPdf}>
+                <PdfIcon className="h-3.5 w-3.5" />
+                PDF
+              </button>
+              <button type="button" className={actionButtonClass} onClick={handleToggleSave}>
+                <StarIcon className={`h-3.5 w-3.5 ${isSaved ? "fill-current text-[#0f1930]" : ""}`} />
+                {isSaved ? "Sparad" : "Spara"}
+              </button>
+              <button type="button" className={actionButtonClass} onClick={handleShare}>
+                <ShareIcon className="h-3.5 w-3.5" />
+                Dela
+              </button>
             </div>
+          </div>
 
-            <div className="mt-4 grid items-start gap-4 lg:grid-cols-2">
-              <article className="rounded-2xl border border-black/10 bg-white p-4">
-                <h2 className="text-xl font-semibold">Området</h2>
-                <p className="mt-2 text-sm text-ink-700">
-                  Lokalen ligger i {listing.district} och nås smidigt med kollektivtrafik, cykel och bil beroende på teamets behov.
-                </p>
-                <div className="mt-3">
-                  <ListingAreaGoogleMap lat={insight.center.lat} lng={insight.center.lng} title={listing.title} />
-                </div>
-                <a
-                  href={googleMapsHref}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="mt-3 inline-flex items-center gap-1.5 rounded-xl border border-black/15 bg-white px-3 py-2 text-xs font-semibold text-ink-700 hover:bg-[#eef3fa]"
+          <button
+            type="button"
+            className="block w-full text-left"
+            onClick={() => navigateTo(galleryHref)}
+          >
+            <img src={images[0]} alt={listing.title} className="h-72 w-full rounded-2xl object-cover sm:h-[460px]" />
+          </button>
+          <div className="grid grid-cols-4 gap-2">
+            {images.slice(0, 4).map((image, index) => (
+              <button
+                key={`${image}-${index}`}
+                type="button"
+                className="block"
+                onClick={() => navigateTo(galleryHref)}
+              >
+                <img src={image} alt={`${listing.title} ${index + 1}`} className="h-20 w-full rounded-xl border border-black/10 object-cover" />
+              </button>
+            ))}
+          </div>
+
+          <div className="mt-4 grid gap-4 lg:grid-cols-2">
+            <article className="flex h-full flex-col rounded-2xl border border-black/10 bg-white p-4">
+              <p className="text-2xl font-semibold">{formatSek(listing.priceMonthly)} /månad</p>
+              <p className="mt-1 text-sm text-ink-500">Hyresperiod: {listing.term || "6-24 månader"}</p>
+
+              <h3 className="mt-5 text-base font-semibold">Bekvämligheter</h3>
+              <ul className="mt-3 flex flex-wrap gap-2">
+                {displayAmenities.map((amenity) => {
+                  const Icon = amenityIconFor(amenity);
+                  return (
+                    <li
+                      key={amenity}
+                      className="inline-flex items-center gap-1.5 rounded-xl border border-black/15 bg-white px-3 py-2 text-xs font-semibold text-ink-700"
+                    >
+                      <Icon className="h-4 w-4 shrink-0 text-ink-700" />
+                      {amenity}
+                    </li>
+                  );
+                })}
+              </ul>
+
+              <div className="mt-auto space-y-2 pt-5">
+                <button
+                  type="button"
+                  className="w-full rounded-2xl border border-[#0f1930] bg-[#0f1930] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#16233f]"
+                  onClick={() => {
+                    if (isGuest) {
+                      onRequireAuth?.("signup", "renter");
+                      return;
+                    }
+                    app.pushToast("Kontaktförfrågan skickad till annonsör.", "success");
+                  }}
                 >
-                  Öppna i Google Maps
-                  <ExternalLinkIcon className="h-3.5 w-3.5" />
-                </a>
-              </article>
+                  Kontakta uthyrare
+                </button>
+                <button
+                  type="button"
+                  className="w-full rounded-2xl border border-black/15 bg-white px-4 py-2.5 text-sm font-semibold text-ink-700 hover:bg-white"
+                  onClick={() => {
+                    if (isGuest) {
+                      onRequireAuth?.("signup", "renter");
+                      return;
+                    }
+                    app.pushToast("Visningsförfrågan skickad.", "success");
+                  }}
+                >
+                  Boka visning
+                </button>
+              </div>
+            </article>
 
-              <article className="self-start rounded-2xl border border-black/10 p-4">
-                <h2 className="text-xl font-semibold">Om lokalen</h2>
-                <div className="mt-2 space-y-3 text-sm text-ink-700">
-                  {longDescription.map((paragraph) => (
-                    <p key={paragraph}>{paragraph}</p>
-                  ))}
+            <article className="rounded-2xl border border-black/10 bg-white p-4">
+              <h3 className="text-base font-semibold">Snabbfakta</h3>
+              <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                <div className="inline-flex items-center gap-2 px-1 py-1 text-sm text-ink-700">
+                  <CoinsIcon className="h-4 w-4 text-ink-600" />
+                  {formatSek(listing.priceMonthly)} / månad
                 </div>
-              </article>
-            </div>
+                <div className="inline-flex items-center gap-2 px-1 py-1 text-sm text-ink-700">
+                  <RulerIcon className="h-4 w-4 text-ink-600" />
+                  {listing.sizeSqm} kvm
+                </div>
+                <div className="inline-flex items-center gap-2 px-1 py-1 text-sm text-ink-700">
+                  <UserIcon className="h-4 w-4 text-ink-600" />
+                  {listing.capacity} platser
+                </div>
+                <div className="inline-flex items-center gap-2 px-1 py-1 text-sm text-ink-700">
+                  <ClockIcon className="h-4 w-4 text-ink-600" />
+                  Svarstid cirka {listing.responseHours}h
+                </div>
+              </div>
+
+              <h3 className="mt-5 text-base font-semibold">Kommunikation & service i området</h3>
+              <div className="mt-3 grid gap-x-8 gap-y-4 md:grid-cols-2">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-ink-500">Kommunaltrafik</p>
+                  <ul className="mt-2 space-y-1.5 text-sm text-ink-700">
+                    {insight.transit.map((item) => (
+                      <li key={item} className="leading-relaxed">• {item}</li>
+                    ))}
+                  </ul>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-ink-500">Närområde</p>
+                  <ul className="mt-2 space-y-1.5 text-sm text-ink-700">
+                    {insight.services.map((item) => (
+                      <li key={item} className="leading-relaxed">• {item}</li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            </article>
+          </div>
+
+          <div className="mt-4 grid items-start gap-4 lg:grid-cols-2">
+            <article className="self-start rounded-2xl border border-black/10 p-4">
+              <h2 className="text-xl font-semibold">Om lokalen</h2>
+              <div className="mt-2 space-y-3 text-sm text-ink-700">
+                {longDescription.map((paragraph) => (
+                  <p key={paragraph}>{paragraph}</p>
+                ))}
+              </div>
+            </article>
+
+            <article className="rounded-2xl border border-black/10 bg-white p-4">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h2 className="text-xl font-semibold">Området</h2>
+                <div className="inline-flex items-center gap-1 rounded-xl border border-black/15 bg-white p-1">
+                  <button
+                    type="button"
+                    className={`inline-flex min-h-[30px] items-center gap-1 rounded-lg px-2.5 text-[11px] font-semibold transition ${
+                      areaViewMode === "map"
+                        ? "bg-[#0f1930] text-white"
+                        : "text-ink-700 hover:bg-white"
+                    }`}
+                    onClick={() => setAreaViewMode("map")}
+                    aria-pressed={areaViewMode === "map"}
+                  >
+                    Karta
+                  </button>
+                  <button
+                    type="button"
+                    className={`inline-flex min-h-[30px] items-center gap-1 rounded-lg px-2.5 text-[11px] font-semibold transition ${
+                      areaViewMode === "street"
+                        ? "bg-[#0f1930] text-white"
+                        : "text-ink-700 hover:bg-white"
+                    }`}
+                    onClick={() => setAreaViewMode("street")}
+                    aria-pressed={areaViewMode === "street"}
+                  >
+                    Gatuvy
+                  </button>
+                </div>
+              </div>
+              <p className="mt-2 text-sm text-ink-700">
+                Lokalen ligger i {listing.district} och nås smidigt med kollektivtrafik, cykel och bil beroende på teamets behov.
+              </p>
+              <div className="mt-3">
+                {areaViewMode === "map" ? (
+                  <ListingAreaGoogleMap lat={insight.center.lat} lng={insight.center.lng} title={listing.title} />
+                ) : (
+                  <ListingStreetView lat={insight.center.lat} lng={insight.center.lng} />
+                )}
+              </div>
+              <a
+                href={googleMapsHref}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-3 inline-flex items-center gap-1.5 rounded-xl border border-black/15 bg-white px-3 py-2 text-xs font-semibold text-ink-700 hover:bg-white"
+              >
+                Öppna i Google Maps
+                <ExternalLinkIcon className="h-3.5 w-3.5" />
+              </a>
+            </article>
+          </div>
         </div>
 
         {similarListings.length > 0 ? (
           <section className="mt-10 pb-8">
             <h2 className="text-2xl font-semibold">Liknande objekt</h2>
-            <div className="mt-6 grid gap-4 md:grid-cols-2">
+            <div className="mt-6 grid gap-4 lg:grid-cols-3">
               {similarListings.map((item) => (
                 <ListingVisualCard
                   key={item.id}
                   listing={item}
-                  shortlisted={Boolean((app.favorites || []).some((entry) => entry.listingId === item.id))}
-                  onOpenListing={(selected) => navigateTo(`/app/listings/${encodeURIComponent(selected.id)}`)}
-                  onToggleShortlist={(listingId) => app.toggleFavorite?.(listingId)}
+                  shortlisted={Boolean((app.favorites || []).some((entry) => String(entry.listingId) === String(item.id)))}
+                  onOpenListing={(selected) => navigateTo(`/app/listings/${encodeURIComponent(selected.id)}?source=${source}`)}
+                  onToggleShortlist={(targetId) => app.toggleFavorite?.(targetId)}
                 />
               ))}
             </div>

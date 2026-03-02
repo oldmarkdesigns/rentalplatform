@@ -48,7 +48,7 @@ function MarketingNavLinks({ hrefPrefix = "", onSectionLinkClick, onPublish, onP
       })}
       <button
         type="button"
-        className="inline-flex items-center gap-1.5 rounded-xl border border-[#0f1930] px-2.5 py-1.5 text-xs font-semibold text-[#0f1930] transition hover:bg-[#f7f9fc]"
+        className="inline-flex items-center gap-1.5 rounded-xl border border-[#0f1930] px-2.5 py-1.5 text-xs font-semibold text-[#0f1930] transition hover:bg-white"
         onClick={onPublish}
       >
         <span aria-hidden="true" className="text-sm leading-none">+</span>

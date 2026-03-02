@@ -154,7 +154,7 @@ function SellerWorkspace({
 
       {mode === "buyer" ? (
         <section className="grid h-[calc(100vh-64px)] overflow-hidden lg:grid-cols-[500px_1fr] xl:grid-cols-[540px_1fr]">
-          <aside className="h-full overflow-hidden border-b border-black/10 bg-[#f8fafc] p-4 lg:border-b-0 lg:border-r lg:p-5">
+          <aside className="h-full overflow-hidden border-b border-black/10 bg-white p-4 lg:border-b-0 lg:border-r lg:p-5">
             <div className="flex h-full flex-col gap-4">
               <div>
                 <h2 className="mt-1 text-3xl font-semibold">Sök & filtrera</h2>
@@ -279,7 +279,7 @@ function SellerWorkspace({
               )}
 
               <div className="rounded-2xl border border-black/10 bg-[#fafafa] p-3">
-                <p className="mt-1 text-sm text-ink-700">Favoriter: {shortlist.length}</p>
+                <p className="mt-1 text-sm text-ink-700">Sparade objekt: {shortlist.length}</p>
                 <div className="mt-2 space-y-1">
                   {shortlist.slice(0, 3).map((item) => (
                     <div key={item.id} className="flex items-center justify-between text-xs">
