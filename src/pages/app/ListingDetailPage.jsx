@@ -374,6 +374,11 @@ function ListingDetailPage({ app, listingId, isGuest = false, onRequireAuth, ini
   const pageRef = useRef(null);
   const [galleryTab, setGalleryTab] = useState("images");
   const [areaViewMode, setAreaViewMode] = useState("map");
+  const [inquiryOverlayOpen, setInquiryOverlayOpen] = useState(false);
+  const [inquiryType, setInquiryType] = useState("contact");
+  const [inquiryMessage, setInquiryMessage] = useState("");
+  const [inquiryDate, setInquiryDate] = useState("");
+  const [inquirySent, setInquirySent] = useState(false);
   const isGalleryView = initialView === "gallery";
   const source = useMemo(() => {
     if (typeof window === "undefined") return "search";
@@ -455,6 +460,31 @@ function ListingDetailPage({ app, listingId, isGuest = false, onRequireAuth, ini
 
   function handleExportPdf() {
     window.print();
+  }
+
+  function openInquiryOverlay(type) {
+    setInquiryType(type === "viewing" ? "viewing" : "contact");
+    setInquiryMessage("");
+    setInquiryDate("");
+    setInquirySent(false);
+    setInquiryOverlayOpen(true);
+  }
+
+  function closeInquiryOverlay() {
+    setInquiryOverlayOpen(false);
+  }
+
+  function handleSendInquiry() {
+    if (!inquiryMessage.trim()) {
+      app.pushToast("Skriv ett meddelande innan du skickar.", "error");
+      return;
+    }
+    if (inquiryType === "viewing" && !inquiryDate) {
+      app.pushToast("Välj datum för visning.", "error");
+      return;
+    }
+
+    setInquirySent(true);
   }
 
   async function handleShare() {
@@ -669,26 +699,14 @@ function ListingDetailPage({ app, listingId, isGuest = false, onRequireAuth, ini
                 <button
                   type="button"
                   className="w-full rounded-2xl border border-[#0f1930] bg-[#0f1930] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#16233f]"
-                  onClick={() => {
-                    if (isGuest) {
-                      onRequireAuth?.("signup", "renter");
-                      return;
-                    }
-                    app.pushToast("Kontaktförfrågan skickad till annonsör.", "success");
-                  }}
+                  onClick={() => openInquiryOverlay("contact")}
                 >
                   Kontakta uthyrare
                 </button>
                 <button
                   type="button"
                   className="w-full rounded-2xl border border-black/15 bg-white px-4 py-2.5 text-sm font-semibold text-ink-700 hover:bg-white"
-                  onClick={() => {
-                    if (isGuest) {
-                      onRequireAuth?.("signup", "renter");
-                      return;
-                    }
-                    app.pushToast("Visningsförfrågan skickad.", "success");
-                  }}
+                  onClick={() => openInquiryOverlay("viewing")}
                 >
                   Boka visning
                 </button>
@@ -800,6 +818,88 @@ function ListingDetailPage({ app, listingId, isGuest = false, onRequireAuth, ini
             </article>
           </div>
         </div>
+
+        {inquiryOverlayOpen ? (
+          <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/45 p-4">
+            <div className="w-full max-w-xl rounded-2xl border border-black/10 bg-white p-5 shadow-[0_20px_60px_rgba(0,0,0,0.25)]">
+              {!inquirySent ? (
+                <>
+                  <h3 className="text-lg font-semibold">Skicka till uthyrare</h3>
+                  <p className="mt-1 text-sm text-ink-600">{listing.title}</p>
+
+                  <label className="mt-4 block text-xs font-semibold uppercase tracking-wide text-ink-500">
+                    Ärendetyp
+                    <select
+                      className="field mt-1.5"
+                      value={inquiryType}
+                      onChange={(event) => setInquiryType(event.target.value === "viewing" ? "viewing" : "contact")}
+                    >
+                      <option value="contact">Kontaktförfrågan</option>
+                      <option value="viewing">Boka visning</option>
+                    </select>
+                  </label>
+
+                  {inquiryType === "viewing" ? (
+                    <label className="mt-3 block text-xs font-semibold uppercase tracking-wide text-ink-500">
+                      Önskat datum
+                      <input
+                        type="date"
+                        className="field mt-1.5"
+                        value={inquiryDate}
+                        onChange={(event) => setInquiryDate(event.target.value)}
+                      />
+                    </label>
+                  ) : null}
+
+                  <label className="mt-3 block text-xs font-semibold uppercase tracking-wide text-ink-500">
+                    Meddelande
+                    <textarea
+                      className="field mt-1.5 min-h-[140px] resize-y"
+                      value={inquiryMessage}
+                      onChange={(event) => setInquiryMessage(event.target.value)}
+                      placeholder={inquiryType === "viewing" ? "Skriv önskad tid och övriga detaljer." : "Skriv ditt meddelande till uthyraren."}
+                    />
+                  </label>
+
+                  <div className="mt-5 flex flex-wrap items-center justify-end gap-2">
+                    <button
+                      type="button"
+                      className="rounded-xl border border-black/15 bg-white px-4 py-2 text-sm font-semibold text-ink-700 hover:bg-white"
+                      onClick={closeInquiryOverlay}
+                    >
+                      Avbryt
+                    </button>
+                    <button
+                      type="button"
+                      className="rounded-xl border border-[#0f1930] bg-[#0f1930] px-4 py-2 text-sm font-semibold text-white hover:bg-[#16233f]"
+                      onClick={handleSendInquiry}
+                    >
+                      Skicka
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <h3 className="text-lg font-semibold">Bekräftelse</h3>
+                  <p className="mt-2 text-sm text-ink-700">
+                    {inquiryType === "viewing"
+                      ? "Din visningsförfrågan är skickad till uthyraren."
+                      : "Din kontaktförfrågan är skickad till uthyraren."}
+                  </p>
+                  <div className="mt-5 flex justify-end">
+                    <button
+                      type="button"
+                      className="rounded-xl border border-[#0f1930] bg-[#0f1930] px-4 py-2 text-sm font-semibold text-white hover:bg-[#16233f]"
+                      onClick={closeInquiryOverlay}
+                    >
+                      Stäng
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        ) : null}
 
         {similarListings.length > 0 ? (
           <section className="mt-10 pb-8">
