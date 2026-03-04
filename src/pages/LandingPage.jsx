@@ -500,7 +500,7 @@ function LandingPage({ user, onOpenAuthOverlay, onLogout, listings = [] }) {
           <nav className="hidden items-center justify-self-center gap-5 lg:flex">
             <MarketingNavLinks
               onSectionLinkClick={handleSectionLinkClick}
-              onPublish={() => (user ? navigateTo("/app/publish") : openAuth("login", "publisher"))}
+              onPublish={() => navigateTo("/app/publish")}
             />
           </nav>
 
@@ -577,7 +577,7 @@ function LandingPage({ user, onOpenAuthOverlay, onLogout, listings = [] }) {
                 <button
                   type="button"
                   className="rounded-xl border border-black/15 bg-white px-3 py-2 text-xs font-semibold text-ink-700 hover:bg-white"
-                  onClick={() => openAuth("login")}
+                  onClick={() => navigateTo("/app/rent")}
                 >
                   Logga in
                 </button>
@@ -806,7 +806,7 @@ function LandingPage({ user, onOpenAuthOverlay, onLogout, listings = [] }) {
                 <button
                   type="button"
                   className="rounded-xl border border-[#0f1930] bg-[#0f1930] px-3 py-2 text-xs font-semibold text-white hover:bg-[#16233f]"
-                  onClick={() => (user ? navigateTo("/app/publish") : openAuth("login"))}
+                  onClick={() => navigateTo("/app/publish")}
                 >
                   Jag vill publicera lokal
                 </button>
@@ -893,7 +893,7 @@ function LandingPage({ user, onOpenAuthOverlay, onLogout, listings = [] }) {
               <button
                 type="button"
                 className="mt-7 rounded-full border border-[#0f1930] bg-[#0f1930] px-8 py-3 text-sm font-semibold uppercase tracking-wide text-white hover:bg-[#16233f]"
-                onClick={() => openAuth("signup", "publisher")}
+                onClick={() => navigateTo("/app/publish")}
               >
                 Läs mer
               </button>
@@ -1004,7 +1004,7 @@ function LandingPage({ user, onOpenAuthOverlay, onLogout, listings = [] }) {
                 <button type="button" className="rounded-xl border border-black/20 bg-white px-3 py-2 text-xs font-semibold text-ink-700" onClick={() => navigateTo("/app/rent?view=available")}>
                   Jag vill hyra lokal
                 </button>
-                <button type="button" className="rounded-xl border border-[#0f1930] bg-[#0f1930] px-3 py-2 text-xs font-semibold text-white hover:bg-[#16233f]" onClick={() => (user ? navigateTo("/app/publish") : openAuth("login"))}>
+                <button type="button" className="rounded-xl border border-[#0f1930] bg-[#0f1930] px-3 py-2 text-xs font-semibold text-white hover:bg-[#16233f]" onClick={() => navigateTo("/app/publish")}>
                   Jag vill publicera lokal
                 </button>
               </div>
@@ -1021,12 +1021,12 @@ function LandingPage({ user, onOpenAuthOverlay, onLogout, listings = [] }) {
             </div>
 
             <div>
-              <p className="text-sm font-semibold">Konton & flöden</p>
+              <p className="text-sm font-semibold">Snabbnavigering</p>
               <div className="mt-3 grid gap-2">
-                <a className="text-sm text-ink-600 hover:text-black" href="#" onClick={(event) => { event.preventDefault(); openAuth("login"); }}>Logga in</a>
-                <a className="text-sm text-ink-600 hover:text-black" href="#" onClick={(event) => { event.preventDefault(); openAuth("signup", "renter"); }}>Skapa konto</a>
-                <a className="text-sm text-ink-600 hover:text-black" href="#" onClick={(event) => { event.preventDefault(); navigateTo("/app/rent"); }}>Hyr lokal (gästläge)</a>
-                <a className="text-sm text-ink-600 hover:text-black" href="#" onClick={(event) => { event.preventDefault(); openAuth("signup", "publisher"); }}>Publicera lokal</a>
+                <a className="text-sm text-ink-600 hover:text-black" href="#" onClick={(event) => { event.preventDefault(); navigateTo("/app/rent"); }}>Hyr lokal</a>
+                <a className="text-sm text-ink-600 hover:text-black" href="#" onClick={(event) => { event.preventDefault(); navigateTo("/app/publish"); }}>Publicera lokal</a>
+                <a className="text-sm text-ink-600 hover:text-black" href="#" onClick={(event) => { event.preventDefault(); navigateTo("/app/my-listings"); }}>Dina objekt</a>
+                <a className="text-sm text-ink-600 hover:text-black" href="#" onClick={(event) => { event.preventDefault(); navigateTo("/app/profile"); }}>Profil</a>
               </div>
             </div>
 

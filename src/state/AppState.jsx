@@ -3,6 +3,12 @@ import { aiApi, authApi, favoriteApi, leadsApi, listingApi, profileApi, viewings
 import { analyticsEventNames, trackEvent } from "../lib/analytics";
 
 const AppStateContext = createContext(null);
+const OPEN_ACCESS_MODE = true;
+const OPEN_ACCESS_CREDENTIALS = [
+  { email: "kombi@demo.se", password: "demo123" },
+  { email: "annonsor@demo.se", password: "demo123" },
+  { email: "hyresgast@demo.se", password: "demo123" }
+];
 
 const defaultFilters = {
   county: "Stockholms län",
@@ -220,7 +226,21 @@ export function AppProvider({ children }) {
 
   async function bootstrapSession() {
     try {
-      const { user: sessionUser } = await authApi.session();
+      const { user: existingSessionUser } = await authApi.session();
+      let sessionUser = existingSessionUser;
+
+      if (OPEN_ACCESS_MODE && !sessionUser) {
+        for (const credentials of OPEN_ACCESS_CREDENTIALS) {
+          try {
+            const response = await authApi.login(credentials);
+            sessionUser = response.user;
+            break;
+          } catch (_error) {
+            // Keep trying fallback demo accounts.
+          }
+        }
+      }
+
       setUser(sessionUser);
       if (sessionUser) {
         setSavedFiltersState(readSavedFilters(sessionUser.id));
@@ -270,6 +290,11 @@ export function AppProvider({ children }) {
   }
 
   async function logout() {
+    if (OPEN_ACCESS_MODE) {
+      pushToast("Öppet läge är aktivt. Utloggning är tillfälligt avstängd.", "info");
+      return user;
+    }
+
     try {
       await authApi.logout();
     } catch (_error) {

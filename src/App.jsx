@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import ViewingRequestModal from "./components/app/ViewingRequestModal";
 import AppShell from "./components/layout/AppShell";
-import AuthOverlay from "./components/layout/AuthOverlay";
 import ToastStack from "./components/layout/ToastStack";
 import LandingPage from "./pages/LandingPage";
 import ForgotPasswordPage from "./pages/ForgotPasswordPage";
@@ -22,22 +21,10 @@ function AppContent() {
   const routeAnimationKey = pathname.startsWith("/app/") ? "/app" : pathname;
   const app = useAppState();
   const [bookingListing, setBookingListing] = useState(null);
-  const [authOverlay, setAuthOverlay] = useState({
-    open: false,
-    mode: "login",
-    preferredRole: "renter"
-  });
 
   function openAuthOverlay(mode = "login", preferredRole = "renter") {
-    setAuthOverlay({
-      open: true,
-      mode,
-      preferredRole
-    });
-  }
-
-  function closeAuthOverlay() {
-    setAuthOverlay((current) => ({ ...current, open: false }));
+    const target = mode === "signup" && preferredRole === "publisher" ? "/app/publish" : "/app/rent";
+    navigateTo(target);
   }
 
   useEffect(() => {
@@ -53,16 +40,12 @@ function AppContent() {
     const isAuthPath = pathname === "/login" || pathname === "/signup" || pathname === "/forgot-password";
 
     if (!isAuthenticated && pathname === "/login") {
-      openAuthOverlay("login");
-      navigateTo("/", { replace: true });
+      navigateTo("/app/rent", { replace: true });
       return;
     }
 
     if (!isAuthenticated && pathname === "/signup") {
-      const roleFromQuery = new URLSearchParams(window.location.search).get("role");
-      const preferredRole = roleFromQuery === "publisher" ? "publisher" : "renter";
-      openAuthOverlay("signup", preferredRole);
-      navigateTo("/", { replace: true });
+      navigateTo("/app/rent", { replace: true });
       return;
     }
 
@@ -254,15 +237,6 @@ function AppContent() {
       />
 
       <ToastStack toasts={app.toasts} />
-
-      <AuthOverlay
-        open={authOverlay.open}
-        mode={authOverlay.mode}
-        preferredRole={authOverlay.preferredRole}
-        onClose={closeAuthOverlay}
-        onLogin={app.login}
-        onSignup={app.signup}
-      />
     </>
   );
 }
