@@ -426,6 +426,11 @@ function ListingDetailPage({ app, listingId, isGuest = false, onRequireAuth, ini
       : [listing.image || "/object-images/object-1.jpeg"];
   }, [listing]);
 
+  const sidebarGalleryImages = useMemo(() => {
+    if (images.length === 0) return [];
+    return Array.from({ length: 12 }, (_, index) => images[index % images.length]);
+  }, [images]);
+
   useEffect(() => {
     setGalleryTab("images");
     setAreaViewMode("map");
@@ -544,10 +549,10 @@ function ListingDetailPage({ app, listingId, isGuest = false, onRequireAuth, ini
 
           <div className="mt-4">
             {galleryTab === "images" ? (
-              <div className="grid gap-3 sm:grid-cols-2">
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {images.map((image, index) => (
                   <div key={`${image}-${index}`} className="overflow-hidden rounded-2xl border border-black/10 bg-white">
-                    <img src={image} alt={`${listing.title} ${index + 1}`} className="h-[340px] w-full object-cover sm:h-[420px]" />
+                    <img src={image} alt={`${listing.title} ${index + 1}`} className="h-48 w-full object-cover sm:h-52" />
                   </div>
                 ))}
               </div>
@@ -617,24 +622,26 @@ function ListingDetailPage({ app, listingId, isGuest = false, onRequireAuth, ini
             </div>
           </div>
 
-          <button
-            type="button"
-            className="block w-full text-left"
-            onClick={() => navigateTo(galleryHref)}
-          >
-            <img src={images[0]} alt={listing.title} className="h-72 w-full rounded-2xl object-cover sm:h-[460px]" />
-          </button>
-          <div className="grid grid-cols-4 gap-2">
-            {images.slice(0, 4).map((image, index) => (
-              <button
-                key={`${image}-${index}`}
-                type="button"
-                className="block"
-                onClick={() => navigateTo(galleryHref)}
-              >
-                <img src={image} alt={`${listing.title} ${index + 1}`} className="h-20 w-full rounded-xl border border-black/10 object-cover" />
-              </button>
-            ))}
+          <div className="grid gap-2 md:grid-cols-2">
+            <button
+              type="button"
+              className="block h-full w-full text-left"
+              onClick={() => navigateTo(galleryHref)}
+            >
+              <img src={images[0]} alt={listing.title} className="h-60 w-full rounded-2xl object-cover sm:h-[340px]" />
+            </button>
+            <div className="grid h-60 grid-cols-4 grid-rows-3 gap-2 sm:h-[340px]">
+              {sidebarGalleryImages.map((image, index) => (
+                <button
+                  key={`${image}-${index}`}
+                  type="button"
+                  className="block"
+                  onClick={() => navigateTo(galleryHref)}
+                >
+                  <img src={image} alt={`${listing.title} ${index + 1}`} className="h-full w-full rounded-xl border border-black/10 object-cover" />
+                </button>
+              ))}
+            </div>
           </div>
 
           <div className="mt-4 grid gap-4 lg:grid-cols-2">
