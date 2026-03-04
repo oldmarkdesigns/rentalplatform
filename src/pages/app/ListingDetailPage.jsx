@@ -699,16 +699,16 @@ function ListingDetailPage({ app, listingId, isGuest = false, onRequireAuth, ini
                 <button
                   type="button"
                   className="w-full rounded-2xl border border-[#0f1930] bg-[#0f1930] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#16233f]"
-                  onClick={() => openInquiryOverlay("contact")}
+                  onClick={() => openInquiryOverlay("viewing")}
                 >
-                  Kontakta uthyrare
+                  Boka visning
                 </button>
                 <button
                   type="button"
                   className="w-full rounded-2xl border border-black/15 bg-white px-4 py-2.5 text-sm font-semibold text-ink-700 hover:bg-white"
-                  onClick={() => openInquiryOverlay("viewing")}
+                  onClick={() => openInquiryOverlay("contact")}
                 >
-                  Boka visning
+                  Kontakta uthyrare
                 </button>
               </div>
             </article>
