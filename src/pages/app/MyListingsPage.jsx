@@ -125,7 +125,7 @@ function StepProgress({ currentStep }) {
                       ? "bg-[#0d162b] text-white"
                       : complete
                         ? "bg-[#1a2845] text-white"
-                        : "border border-black/15 bg-white text-ink-500"
+                        : "border border-black/10 bg-white text-ink-500"
                   }`}
                 >
                   {index + 1}
@@ -762,13 +762,13 @@ function MyListingsPage({ app }) {
                           <p className="truncate text-base font-semibold leading-tight">{listing.title}</p>
                           <p className="truncate text-xs text-ink-600">{listing.district} • {listing.address}</p>
                         </div>
-                        <span className="shrink-0 rounded-xl border border-black/15 bg-white px-2 py-1 text-[10px] font-semibold uppercase text-ink-700">
+                        <span className="shrink-0 rounded-xl border border-black/10 bg-white px-2 py-1 text-[10px] font-semibold uppercase text-ink-700">
                           {statusLabel(listing.status)}
                         </span>
                       </div>
 
                       <div className="flex flex-wrap items-center gap-1.5 text-[10px]">
-                        <span className="rounded-full border border-black/15 bg-[#fafafa] px-2 py-1">{listing.type}</span>
+                        <span className="rounded-full border border-black/10 bg-[#fafafa] px-2 py-1">{listing.type}</span>
                         <span className={`rounded-full border px-2 py-1 ${listing.verified ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-amber-200 bg-amber-50 text-amber-700"}`}>
                           {listing.verified ? "Verifierad" : "Ej verifierad"}
                         </span>

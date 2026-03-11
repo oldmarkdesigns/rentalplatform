@@ -4,7 +4,7 @@ function statusClass(status) {
   if (status === "Ny") return "border-amber-200 bg-amber-50 text-amber-800";
   if (status === "Kontaktad") return "border-blue-200 bg-blue-50 text-blue-800";
   if (status === "Visning bokad") return "border-emerald-200 bg-emerald-50 text-emerald-800";
-  return "border-black/15 bg-[#f7f7f7] text-ink-700";
+  return "border-black/10 bg-[#f7f7f7] text-ink-700";
 }
 
 function statusDetail(status) {

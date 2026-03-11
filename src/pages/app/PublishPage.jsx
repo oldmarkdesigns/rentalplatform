@@ -771,21 +771,21 @@ function PublishPage({ app }) {
                             <div className="mt-2 space-y-1.5">
                               <div className="flex flex-wrap gap-1.5">
                                 {index !== 0 ? (
-                                  <button type="button" className="min-h-0 rounded-xl border border-black/15 bg-white px-2.5 py-1 text-[11px] font-semibold text-ink-700" onClick={() => setCoverImage(index)}>
+                                  <button type="button" className="min-h-0 rounded-xl border border-black/10 bg-white px-2.5 py-1 text-[11px] font-semibold text-ink-700" onClick={() => setCoverImage(index)}>
                                     Sätt som omslag
                                   </button>
                                 ) : null}
 
-                                <label className="min-h-0 cursor-pointer rounded-xl border border-black/15 bg-white px-2.5 py-1 text-[11px] font-semibold text-ink-700">
+                                <label className="min-h-0 cursor-pointer rounded-xl border border-black/10 bg-white px-2.5 py-1 text-[11px] font-semibold text-ink-700">
                                   Ersätt bild
                                   <input type="file" accept="image/*" className="hidden" onChange={(event) => void handleReplaceImage(index, event)} />
                                 </label>
                               </div>
                               <div className="flex flex-wrap gap-1.5">
-                                <button type="button" className="min-h-0 rounded-xl border border-black/15 bg-white px-2.5 py-1 text-[11px] font-semibold text-ink-700" onClick={() => moveImage(index, -1)} disabled={index === 0}>
+                                <button type="button" className="min-h-0 rounded-xl border border-black/10 bg-white px-2.5 py-1 text-[11px] font-semibold text-ink-700" onClick={() => moveImage(index, -1)} disabled={index === 0}>
                                   Flytta vänster
                                 </button>
-                                <button type="button" className="min-h-0 rounded-xl border border-black/15 bg-white px-2.5 py-1 text-[11px] font-semibold text-ink-700" onClick={() => moveImage(index, 1)} disabled={index === draft.images.length - 1}>
+                                <button type="button" className="min-h-0 rounded-xl border border-black/10 bg-white px-2.5 py-1 text-[11px] font-semibold text-ink-700" onClick={() => moveImage(index, 1)} disabled={index === draft.images.length - 1}>
                                   Flytta höger
                                 </button>
                                 <button type="button" className="min-h-0 rounded-xl border border-rose-200 bg-rose-50 px-2.5 py-1 text-[11px] font-semibold text-rose-700" onClick={() => removeImage(index)}>
@@ -831,7 +831,7 @@ function PublishPage({ app }) {
                               className={`rounded-xl border px-3 py-2 text-xs font-semibold transition ${
                                 active
                                   ? "border-[#0f1930] bg-[#0f1930] text-white"
-                                  : "border-black/15 bg-white text-ink-700 hover:bg-white"
+                                  : "border-black/10 bg-white text-ink-700 hover:bg-white"
                               }`}
                               onClick={() => toggleAmenity(amenity.value)}
                             >

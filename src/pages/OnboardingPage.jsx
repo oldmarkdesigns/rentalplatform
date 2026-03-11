@@ -64,7 +64,7 @@ function OnboardingPage({ user, onComplete }) {
   return (
     <PublicLayout title="Kom igång" subtitle="Välj syfte och komplettera profil för bästa matchning och snabb publicering.">
       <div className="mx-auto max-w-2xl">
-        <div className="mb-4 inline-flex rounded-2xl border border-black/15 bg-white p-1 text-xs">
+        <div className="mb-4 inline-flex rounded-2xl border border-black/10 bg-white p-1 text-xs">
           {[
             "Välj syfte",
             "Konto",
@@ -83,13 +83,13 @@ function OnboardingPage({ user, onComplete }) {
               <p className="text-sm text-ink-700">Vad vill du göra primärt i plattformen?</p>
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                 {availableRoles.includes("renter") ? (
-                  <button type="button" onClick={() => setPrimaryRole("renter")} className={`rounded-2xl border px-3 py-3 text-left ${primaryRole === "renter" ? "border-[#0f1930] bg-[#0f1930] hover:bg-[#16233f] text-white" : "border-black/15 bg-white"}`}>
+                  <button type="button" onClick={() => setPrimaryRole("renter")} className={`rounded-2xl border px-3 py-3 text-left ${primaryRole === "renter" ? "border-[#0f1930] bg-[#0f1930] hover:bg-[#16233f] text-white" : "border-black/10 bg-white"}`}>
                     <p className="font-semibold">Jag vill hyra lokal</p>
                     <p className="text-xs opacity-80">Sök, filtrera, AI-matchning och boka visning.</p>
                   </button>
                 ) : null}
                 {availableRoles.includes("publisher") ? (
-                  <button type="button" onClick={() => setPrimaryRole("publisher")} className={`rounded-2xl border px-3 py-3 text-left ${primaryRole === "publisher" ? "border-[#0f1930] bg-[#0f1930] hover:bg-[#16233f] text-white" : "border-black/15 bg-white"}`}>
+                  <button type="button" onClick={() => setPrimaryRole("publisher")} className={`rounded-2xl border px-3 py-3 text-left ${primaryRole === "publisher" ? "border-[#0f1930] bg-[#0f1930] hover:bg-[#16233f] text-white" : "border-black/10 bg-white"}`}>
                     <p className="font-semibold">Jag vill hyra ut lokal</p>
                     <p className="text-xs opacity-80">Publicera, hantera intressen och svara snabbare.</p>
                   </button>

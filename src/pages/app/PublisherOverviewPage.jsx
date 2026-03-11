@@ -26,7 +26,7 @@ function statusPillClass(status) {
   if (status === "draft") {
     return "border-amber-200 bg-amber-50 text-amber-700";
   }
-  return "border-black/15 bg-white text-ink-700";
+  return "border-black/10 bg-white text-ink-700";
 }
 
 function statusLabel(status) {

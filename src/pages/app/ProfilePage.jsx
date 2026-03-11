@@ -356,20 +356,20 @@ function ProfilePage({ app }) {
 
               <form className="mt-4 grid gap-2 sm:grid-cols-[1.3fr_1fr_1fr_auto]" onSubmit={inviteTeamMember}>
                 <input
-                  className="w-full rounded-xl border border-black/15 bg-white px-3 py-2 text-sm text-ink-900 placeholder:text-ink-500 focus:border-[#0f1930] focus:outline-none"
+                  className="w-full rounded-xl border border-black/10 bg-white px-3 py-2 text-sm text-ink-900 placeholder:text-ink-500 focus:border-[#0f1930] focus:outline-none"
                   value={teamInvite.email}
                   onChange={(event) => setTeamInvite((prev) => ({ ...prev, email: event.target.value }))}
                   placeholder="E-post"
                   type="email"
                 />
                 <input
-                  className="w-full rounded-xl border border-black/15 bg-white px-3 py-2 text-sm text-ink-900 placeholder:text-ink-500 focus:border-[#0f1930] focus:outline-none"
+                  className="w-full rounded-xl border border-black/10 bg-white px-3 py-2 text-sm text-ink-900 placeholder:text-ink-500 focus:border-[#0f1930] focus:outline-none"
                   value={teamInvite.firstName}
                   onChange={(event) => setTeamInvite((prev) => ({ ...prev, firstName: event.target.value }))}
                   placeholder="Förnamn"
                 />
                 <input
-                  className="w-full rounded-xl border border-black/15 bg-white px-3 py-2 text-sm text-ink-900 placeholder:text-ink-500 focus:border-[#0f1930] focus:outline-none"
+                  className="w-full rounded-xl border border-black/10 bg-white px-3 py-2 text-sm text-ink-900 placeholder:text-ink-500 focus:border-[#0f1930] focus:outline-none"
                   value={teamInvite.lastName}
                   onChange={(event) => setTeamInvite((prev) => ({ ...prev, lastName: event.target.value }))}
                   placeholder="Efternamn"
@@ -406,7 +406,7 @@ function ProfilePage({ app }) {
                         {member.id !== "team-owner" ? (
                           <button
                             type="button"
-                            className="rounded-lg border border-black/15 bg-white px-2 py-1 text-[11px] font-semibold text-ink-700 hover:bg-white"
+                            className="rounded-lg border border-black/10 bg-white px-2 py-1 text-[11px] font-semibold text-ink-700 hover:bg-white"
                             onClick={() => removeTeamMember(member.id)}
                           >
                             Ta bort

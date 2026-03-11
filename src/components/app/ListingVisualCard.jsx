@@ -49,7 +49,7 @@ function ListingVisualCard({ listing, shortlisted, onOpenListing, onToggleShortl
 
   if (compact) {
     return (
-      <article className="overflow-hidden rounded-3xl border border-black/15 bg-white">
+      <article className="overflow-hidden rounded-3xl border border-black/10 bg-white">
         <div
           role="button"
           tabIndex={0}
@@ -67,7 +67,7 @@ function ListingVisualCard({ listing, shortlisted, onOpenListing, onToggleShortl
             <button
               type="button"
               aria-label={shortlisted ? "Ta bort sparad" : "Spara"}
-              className="absolute right-3 top-3 inline-flex h-9 w-9 min-h-9 min-w-9 aspect-square shrink-0 items-center justify-center rounded-full border border-black/15 bg-white p-0 text-ink-700 hover:bg-white"
+              className="absolute right-3 top-3 inline-flex h-9 w-9 min-h-9 min-w-9 aspect-square shrink-0 items-center justify-center rounded-full border border-black/10 bg-white p-0 text-ink-700 hover:bg-white"
               onClick={(event) => {
                 event.stopPropagation();
                 onToggleShortlist(listing.id);
@@ -77,7 +77,7 @@ function ListingVisualCard({ listing, shortlisted, onOpenListing, onToggleShortl
             </button>
           </div>
           <div className="px-3 pb-3 pt-2.5">
-            <h3 className="text-[15px] leading-tight font-medium text-black">{listing.title}</h3>
+            <h3 className="text-sm leading-tight font-medium text-black">{listing.title}</h3>
             <p className="mt-1 text-xs text-ink-600">{buildAddress(listing)}</p>
             <p className="mt-1 text-sm font-medium text-ink-800">
               <span>{listing.type || "Lokal"}</span>
@@ -118,7 +118,7 @@ function ListingVisualCard({ listing, shortlisted, onOpenListing, onToggleShortl
           <button
             type="button"
             aria-label={shortlisted ? "Ta bort sparad" : "Spara"}
-            className="inline-flex h-10 w-10 min-h-10 min-w-10 items-center justify-center rounded-full border border-black/15 bg-white p-0 text-ink-700 hover:bg-[#eef3fa]"
+            className="inline-flex h-10 w-10 min-h-10 min-w-10 items-center justify-center rounded-full border border-black/10 bg-white p-0 text-ink-700 hover:bg-[#eef3fa]"
             onClick={(event) => {
               event.stopPropagation();
               onToggleShortlist(listing.id);
@@ -130,14 +130,14 @@ function ListingVisualCard({ listing, shortlisted, onOpenListing, onToggleShortl
 
         <div className="flex flex-1 flex-col p-5">
           <div className="space-y-2">
-            <h3 className="text-2xl font-semibold leading-tight text-[#0f1930]">{listing.title}</h3>
+            <h3 className="text-xl font-semibold leading-tight text-[#0f1930]">{listing.title}</h3>
             <p className="flex items-center gap-1.5 text-sm text-ink-600">
               <PinIcon className="h-4 w-4 text-ink-500" />
               <span>{buildAddress(listing)}</span>
             </p>
           </div>
 
-          <div className="mt-5 flex flex-wrap gap-3">
+          <div className="mt-4 flex flex-wrap gap-3">
             <p className="flex items-center gap-1.5 text-sm text-ink-600">
               <UserIcon className="h-4 w-4 text-ink-500" />
               <span>{formatCapacity(listing.capacity)}</span>
@@ -148,27 +148,27 @@ function ListingVisualCard({ listing, shortlisted, onOpenListing, onToggleShortl
             </p>
           </div>
 
-          <div className="mt-5 pb-4">
+          <div className="mt-4 pb-3">
             <div className="flex flex-wrap gap-2">
             {visibleAmenities.map((amenity) => {
               const Icon = amenityIconFor(amenity);
               return (
-                <span key={amenity} className="inline-flex items-center gap-1.5 rounded-xl border border-black/15 bg-white px-3 py-2 text-xs font-semibold text-ink-700">
+                <span key={amenity} className="inline-flex items-center gap-1.5 rounded-xl border border-black/10 bg-white px-3 py-2 text-xs font-semibold text-ink-700">
                   <Icon className="h-4 w-4 shrink-0 text-ink-700" />
                   {amenity}
                 </span>
               );
             })}
             {extraAmenities > 0 ? (
-              <span className="inline-flex items-center gap-1.5 rounded-xl border border-black/15 bg-white px-3 py-2 text-xs font-semibold text-ink-700">+{extraAmenities} more</span>
+              <span className="inline-flex items-center gap-1.5 rounded-xl border border-black/10 bg-white px-3 py-2 text-xs font-semibold text-ink-700">+{extraAmenities} more</span>
             ) : null}
             </div>
           </div>
 
-          <div className="mt-auto border-t border-black/10 pt-5">
+          <div className="mt-auto border-t border-black/10 pt-4">
             <div className="flex items-end justify-between gap-4">
               <div>
-                <p className="text-2xl font-semibold text-[#0f1930]">{formatPriceSek(listing.priceMonthly)} /månad</p>
+                <p className="text-xl font-semibold text-[#0f1930]">{formatPriceSek(listing.priceMonthly)} /månad</p>
                 <p className="mt-1 text-sm text-ink-500">Hyresperiod: {listing.term || "6-24 månader"}</p>
               </div>
             </div>

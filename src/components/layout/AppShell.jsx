@@ -107,7 +107,7 @@ function AppShell({ pathname, user, onSwitchRole, onLogout, onRequireAuth, isGue
         <div className="grid w-full grid-cols-[1fr_auto_1fr] items-center gap-3">
           <div className="flex items-center gap-3">
             <button type="button" className="justify-self-start text-left" onClick={() => navigateTo("/")}>
-              <span className="inline-flex items-center gap-2 rounded-xl border border-black/15 bg-white px-2.5 py-1.5">
+              <span className="inline-flex items-center gap-2 rounded-xl border border-black/10 bg-white px-2.5 py-1.5">
                 <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-dashed border-black/30 bg-white text-[9px] font-semibold uppercase tracking-wide text-ink-500">
                   LOGGA
                 </span>
@@ -156,7 +156,7 @@ function AppShell({ pathname, user, onSwitchRole, onLogout, onRequireAuth, isGue
                       <>
                         <button
                           type="button"
-                          className="rounded-xl border border-black/15 bg-white px-3 py-2 text-left font-semibold text-ink-700"
+                          className="rounded-xl border border-black/10 bg-white px-3 py-2 text-left font-semibold text-ink-700"
                           onClick={() => onRequireAuth?.("login")}
                         >
                           Logga in
@@ -171,14 +171,14 @@ function AppShell({ pathname, user, onSwitchRole, onLogout, onRequireAuth, isGue
                       </>
                     ) : (
                       <>
-                        <button type="button" className="rounded-xl border border-black/15 bg-white px-3 py-2 text-left font-semibold text-ink-700" onClick={() => navigateTo("/app/profile")}>
+                        <button type="button" className="rounded-xl border border-black/10 bg-white px-3 py-2 text-left font-semibold text-ink-700" onClick={() => navigateTo("/app/profile")}>
                           <span className="inline-flex items-center gap-1.5">
                             <UserIcon className="h-4 w-4" />
                             Profil
                           </span>
                         </button>
                         {roleSet.has("publisher") ? (
-                          <button type="button" className="rounded-xl border border-black/15 bg-white px-3 py-2 text-left font-semibold text-ink-700" onClick={() => navigateTo("/app/my-listings")}>
+                          <button type="button" className="rounded-xl border border-black/10 bg-white px-3 py-2 text-left font-semibold text-ink-700" onClick={() => navigateTo("/app/my-listings")}>
                             <span className="inline-flex items-center gap-1.5">
                               <BuildingIcon className="h-4 w-4" />
                               Dina objekt
@@ -187,7 +187,7 @@ function AppShell({ pathname, user, onSwitchRole, onLogout, onRequireAuth, isGue
                         ) : null}
                         <button
                           type="button"
-                          className="rounded-xl border border-black/15 bg-white px-3 py-2 text-left font-semibold text-ink-700"
+                          className="rounded-xl border border-black/10 bg-white px-3 py-2 text-left font-semibold text-ink-700"
                           onClick={async () => {
                             await onLogout();
                             navigateTo("/", { replace: true });
@@ -209,7 +209,7 @@ function AppShell({ pathname, user, onSwitchRole, onLogout, onRequireAuth, isGue
             <div className="flex items-center justify-self-end gap-2">
               <button
                 type="button"
-                className="rounded-xl border border-black/15 bg-white px-3 py-2 text-xs font-semibold text-ink-700 hover:bg-white"
+                className="rounded-xl border border-black/10 bg-white px-3 py-2 text-xs font-semibold text-ink-700 hover:bg-white"
                 onClick={() => onRequireAuth?.("login")}
               >
                 Logga in
@@ -277,7 +277,7 @@ function AppShell({ pathname, user, onSwitchRole, onLogout, onRequireAuth, isGue
             <div className="mt-5 flex items-center justify-end gap-2">
               <button
                 type="button"
-                className="rounded-xl border border-black/15 bg-white px-4 py-2 text-sm font-semibold text-ink-700 hover:bg-white"
+                className="rounded-xl border border-black/10 bg-white px-4 py-2 text-sm font-semibold text-ink-700 hover:bg-white"
                 onClick={() => setShowLeaveSearchConfirm(false)}
               >
                 Avbryt

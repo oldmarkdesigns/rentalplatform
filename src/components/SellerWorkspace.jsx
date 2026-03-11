@@ -74,14 +74,14 @@ function ListingVisualCard({ listing, shortlisted, onOpenListing, onBookViewing,
           <button
             type="button"
             onClick={() => onToggleShortlist(listing)}
-            className="rounded-2xl border border-black/15 bg-white px-3 py-2 text-xs font-semibold text-black"
+            className="rounded-2xl border border-black/10 bg-white px-3 py-2 text-xs font-semibold text-black"
           >
             {shortlisted ? "Sparad" : "Spara"}
           </button>
           <button
             type="button"
             onClick={() => onOpenListing(listing)}
-            className="rounded-2xl border border-black/15 bg-white px-3 py-2 text-xs font-semibold text-black"
+            className="rounded-2xl border border-black/10 bg-white px-3 py-2 text-xs font-semibold text-black"
           >
             Visa
           </button>
@@ -134,7 +134,7 @@ function SellerWorkspace({
           <span className="text-xs text-ink-500">Prototyp</span>
         </div>
 
-        <div className="inline-flex rounded-2xl border border-black/15 bg-white p-1 text-xs">
+        <div className="inline-flex rounded-2xl border border-black/10 bg-white p-1 text-xs">
           <button
             type="button"
             onClick={() => onModeChange("buyer")}
@@ -160,7 +160,7 @@ function SellerWorkspace({
                 <h2 className="mt-1 text-3xl font-semibold">Sök & filtrera</h2>
               </div>
 
-              <div className="inline-flex w-fit rounded-2xl border border-black/15 bg-white p-1 text-xs">
+              <div className="inline-flex w-fit rounded-2xl border border-black/10 bg-white p-1 text-xs">
                 <button
                   type="button"
                   onClick={() => setSearchTool("filter")}
@@ -333,7 +333,7 @@ function SellerWorkspace({
               <p className="mt-2 text-sm text-ink-500">Ett centrerat steg-för-steg-flöde för snabb publicering.</p>
             </div>
 
-            <div className="mt-6 inline-flex w-full flex-wrap items-center justify-center gap-2 rounded-2xl border border-black/15 bg-white p-1 text-xs">
+            <div className="mt-6 inline-flex w-full flex-wrap items-center justify-center gap-2 rounded-2xl border border-black/10 bg-white p-1 text-xs">
               {steps.map((label, index) => (
                 <button
                   key={label}

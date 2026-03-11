@@ -447,7 +447,7 @@ function ListingDetailPage({ app, listingId, isGuest = false, onRequireAuth, ini
     else window.scrollTo({ top: 0, behavior: "auto" });
   }, [listingId, isGalleryView]);
 
-  const actionButtonClass = "inline-flex min-h-[40px] items-center gap-1.5 rounded-xl border border-black/15 bg-white px-3 text-xs font-semibold text-ink-700 hover:bg-white";
+  const actionButtonClass = "inline-flex min-h-[40px] items-center gap-1.5 rounded-xl border border-black/10 bg-white px-3 text-xs font-semibold text-ink-700 hover:bg-white";
 
   function handleToggleSave() {
     if (!listing?.id) return;
@@ -593,7 +593,7 @@ function ListingDetailPage({ app, listingId, isGuest = false, onRequireAuth, ini
                   href={googleMapsHref}
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex items-center gap-1.5 rounded-xl border border-black/15 bg-white px-3 py-2 text-xs font-semibold text-ink-700 hover:bg-white"
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-black/10 bg-white px-3 py-2 text-xs font-semibold text-ink-700 hover:bg-white"
                 >
                   Öppna i Google Maps
                   <ExternalLinkIcon className="h-3.5 w-3.5" />
@@ -686,7 +686,7 @@ function ListingDetailPage({ app, listingId, isGuest = false, onRequireAuth, ini
                   return (
                     <li
                       key={amenity}
-                      className="inline-flex items-center gap-1.5 rounded-xl border border-black/15 bg-white px-3 py-2 text-xs font-semibold text-ink-700"
+                      className="inline-flex items-center gap-1.5 rounded-xl border border-black/10 bg-white px-3 py-2 text-xs font-semibold text-ink-700"
                     >
                       <Icon className="h-4 w-4 shrink-0 text-ink-700" />
                       {amenity}
@@ -705,7 +705,7 @@ function ListingDetailPage({ app, listingId, isGuest = false, onRequireAuth, ini
                 </button>
                 <button
                   type="button"
-                  className="w-full rounded-2xl border border-black/15 bg-white px-4 py-2.5 text-sm font-semibold text-ink-700 hover:bg-white"
+                  className="w-full rounded-2xl border border-black/10 bg-white px-4 py-2.5 text-sm font-semibold text-ink-700 hover:bg-white"
                   onClick={() => openInquiryOverlay("contact")}
                 >
                   Kontakta uthyrare
@@ -769,7 +769,7 @@ function ListingDetailPage({ app, listingId, isGuest = false, onRequireAuth, ini
             <article className="rounded-2xl border border-black/10 bg-white p-4">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <h2 className="text-xl font-semibold">Området</h2>
-                <div className="inline-flex items-center gap-1 rounded-xl border border-black/15 bg-white p-1">
+                <div className="inline-flex items-center gap-1 rounded-xl border border-black/10 bg-white p-1">
                   <button
                     type="button"
                     className={`inline-flex min-h-[30px] items-center gap-1 rounded-lg px-2.5 text-[11px] font-semibold transition ${
@@ -810,7 +810,7 @@ function ListingDetailPage({ app, listingId, isGuest = false, onRequireAuth, ini
                 href={googleMapsHref}
                 target="_blank"
                 rel="noreferrer"
-                className="mt-3 inline-flex items-center gap-1.5 rounded-xl border border-black/15 bg-white px-3 py-2 text-xs font-semibold text-ink-700 hover:bg-white"
+                className="mt-3 inline-flex items-center gap-1.5 rounded-xl border border-black/10 bg-white px-3 py-2 text-xs font-semibold text-ink-700 hover:bg-white"
               >
                 Öppna i Google Maps
                 <ExternalLinkIcon className="h-3.5 w-3.5" />
@@ -864,7 +864,7 @@ function ListingDetailPage({ app, listingId, isGuest = false, onRequireAuth, ini
                   <div className="mt-5 flex flex-wrap items-center justify-end gap-2">
                     <button
                       type="button"
-                      className="rounded-xl border border-black/15 bg-white px-4 py-2 text-sm font-semibold text-ink-700 hover:bg-white"
+                      className="rounded-xl border border-black/10 bg-white px-4 py-2 text-sm font-semibold text-ink-700 hover:bg-white"
                       onClick={closeInquiryOverlay}
                     >
                       Avbryt

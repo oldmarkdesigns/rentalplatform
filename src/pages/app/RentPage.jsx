@@ -10,6 +10,7 @@ import {
   BuildingIcon,
   CarIcon,
   DumbbellIcon,
+  EyeIcon,
   FilterIcon,
   ListIcon,
   LockerIcon,
@@ -109,8 +110,8 @@ const amenityAliasesByValue = {
   säkerhetsdörr: ["säkerhetsdörr", "säkerhet", "secure", "security", "säker entré", "säker entre"]
 };
 
-const heroInputClass = "w-full rounded-2xl border border-black/15 bg-transparent px-3 py-3 text-sm text-ink-900 placeholder:text-ink-500 focus:border-[#0f1930] focus:outline-none";
-const heroSelectClass = "select-chevron w-full rounded-2xl border border-black/15 bg-transparent px-3 py-3 pr-10 text-sm text-ink-900 focus:border-[#0f1930] focus:outline-none";
+const heroInputClass = "w-full rounded-2xl border border-black/10 bg-transparent px-3 py-3 text-sm text-ink-900 placeholder:text-ink-500 focus:border-[#0f1930] focus:outline-none";
+const heroSelectClass = "select-chevron w-full rounded-2xl border border-black/10 bg-transparent px-3 py-3 pr-10 text-sm text-ink-900 focus:border-[#0f1930] focus:outline-none";
 
 function parseAmenityTerms(value) {
   return String(value || "")
@@ -241,6 +242,7 @@ function GoogleListingsMap({
   shortlistedIds,
   selectedListing,
   onCloseSelectedListing,
+  showMatchChip = false,
   dense = false
 }) {
   const containerRef = useRef(null);
@@ -474,7 +476,7 @@ function GoogleListingsMap({
               )}
               onOpenListing={onOpenListing}
               onToggleShortlist={onToggleShortlist}
-              showMatchChip
+              showMatchChip={showMatchChip}
             />
           </div>
         </div>
@@ -568,7 +570,7 @@ function AuthPromptModal({ mode, onClose, onRequireAuth }) {
             Skapa konto
           </button>
         </div>
-        <button type="button" className="mt-3 w-full rounded-xl border border-black/15 bg-white px-3 py-2 text-xs font-semibold text-ink-700" onClick={onClose}>
+        <button type="button" className="mt-3 w-full rounded-xl border border-black/10 bg-white px-3 py-2 text-xs font-semibold text-ink-700" onClick={onClose}>
           Fortsätt söka som gäst
         </button>
       </div>
@@ -591,7 +593,7 @@ function readFlagParam(params, key, legacyKey = "") {
   return raw === "1" || raw === "true";
 }
 
-function buildSearchChips(searchMeta, defaultMaxBudget) {
+function buildSearchChipEntries(searchMeta, defaultMaxBudget) {
   const chips = [];
   const activeFilters = searchMeta?.filters || {};
   const minBudgetValue = String(activeFilters.minBudget ?? "").trim();
@@ -600,27 +602,112 @@ function buildSearchChips(searchMeta, defaultMaxBudget) {
   const hasExplicitMinBudget = minBudgetValue !== "";
   const hasExplicitMaxBudget = maxBudgetValue !== "" && maxBudgetValue !== defaultMaxBudgetValue;
 
-  if (activeFilters.query) chips.push(`Sökord: ${activeFilters.query}`);
-  if (activeFilters.district && activeFilters.district !== "Alla") chips.push(`Område: ${activeFilters.district}`);
-  if (Array.isArray(activeFilters.type) && activeFilters.type.length > 0) chips.push(`Typ: ${activeFilters.type.join(", ")}`);
-  if (activeFilters.teamSize) chips.push(`Platser: ${activeFilters.teamSize}+`);
-  if (activeFilters.minSize || activeFilters.maxSize) chips.push(`Yta: ${activeFilters.minSize || 0}-${activeFilters.maxSize || "∞"} kvm`);
-  if (hasExplicitMinBudget || hasExplicitMaxBudget) chips.push(`Budget: ${minBudgetValue || 0}-${maxBudgetValue || "∞"} kr`);
-  if (activeFilters.transitDistance) chips.push(`Kommunaltrafik: ${activeFilters.transitDistance}`);
-  if (activeFilters.moveInDate) chips.push(`Inflytt: ${activeFilters.moveInDate}`);
-  if (activeFilters.contractFlex) chips.push(`Avtal: ${activeFilters.contractFlex}`);
-  if (activeFilters.accessHours) chips.push(`Access: ${activeFilters.accessHours}`);
-  if (activeFilters.parkingType) chips.push(`Parkering: ${activeFilters.parkingType}`);
-  if (activeFilters.layoutType) chips.push(`Planlösning: ${activeFilters.layoutType}`);
-  if (activeFilters.advertiser && activeFilters.advertiser !== "Alla") chips.push(`Annonsör: ${activeFilters.advertiser}`);
-  if (activeFilters.includeOperatingCosts) chips.push("Driftkostnader ingår");
-  if (activeFilters.accessibilityAdapted) chips.push("Tillgänglighetsanpassad");
-  if (activeFilters.ecoCertified) chips.push("Miljöcertifierad");
-  if (searchMeta?.amenityQuery) chips.push(`Bekvämlighet: ${searchMeta.amenityQuery}`);
-  if (searchMeta?.furnishedFilter === "yes") chips.push("Möblerad");
-  if (searchMeta?.furnishedFilter === "no") chips.push("Ej möblerad");
+  if (activeFilters.query) chips.push({ key: "query", label: `Sökord: ${activeFilters.query}` });
+  const districtValue = String(activeFilters.district || "").trim();
+  if (districtValue && districtValue !== "Alla" && districtValue !== "Alla områden" && districtValue !== "Alla områden i Stockholm") {
+    chips.push({ key: "district", label: `Område: ${districtValue}` });
+  }
+  if (Array.isArray(activeFilters.type) && activeFilters.type.length > 0) chips.push({ key: "type", label: `Typ: ${activeFilters.type.join(", ")}` });
+  if (activeFilters.teamSize) chips.push({ key: "teamSize", label: `Platser: ${activeFilters.teamSize}+` });
+  if (activeFilters.minSize || activeFilters.maxSize) chips.push({ key: "size", label: `Yta: ${activeFilters.minSize || 0}-${activeFilters.maxSize || "∞"} kvm` });
+  if (hasExplicitMinBudget || hasExplicitMaxBudget) chips.push({ key: "budget", label: `Budget: ${minBudgetValue || 0}-${maxBudgetValue || "∞"} kr` });
+  if (activeFilters.transitDistance) chips.push({ key: "transitDistance", label: `Kommunaltrafik: ${activeFilters.transitDistance}` });
+  if (activeFilters.moveInDate) chips.push({ key: "moveInDate", label: `Inflytt: ${activeFilters.moveInDate}` });
+  if (activeFilters.contractFlex) chips.push({ key: "contractFlex", label: `Avtal: ${activeFilters.contractFlex}` });
+  if (activeFilters.accessHours) chips.push({ key: "accessHours", label: `Access: ${activeFilters.accessHours}` });
+  if (activeFilters.parkingType) chips.push({ key: "parkingType", label: `Parkering: ${activeFilters.parkingType}` });
+  if (activeFilters.layoutType) chips.push({ key: "layoutType", label: `Planlösning: ${activeFilters.layoutType}` });
+  if (activeFilters.advertiser && activeFilters.advertiser !== "Alla") chips.push({ key: "advertiser", label: `Annonsör: ${activeFilters.advertiser}` });
+  if (activeFilters.includeOperatingCosts) chips.push({ key: "includeOperatingCosts", label: "Driftkostnader ingår" });
+  if (activeFilters.accessibilityAdapted) chips.push({ key: "accessibilityAdapted", label: "Tillgänglighetsanpassad" });
+  if (activeFilters.ecoCertified) chips.push({ key: "ecoCertified", label: "Miljöcertifierad" });
+  if (searchMeta?.amenityQuery) chips.push({ key: "amenityQuery", label: `Bekvämlighet: ${searchMeta.amenityQuery}` });
+  if (searchMeta?.furnishedFilter === "yes") chips.push({ key: "furnishedFilter", label: "Möblerad" });
+  if (searchMeta?.furnishedFilter === "no") chips.push({ key: "furnishedFilter", label: "Ej möblerad" });
 
   return chips;
+}
+
+const SEARCH_CHIP_ORDER = [
+  "query",
+  "district",
+  "type",
+  "teamSize",
+  "size",
+  "budget",
+  "transitDistance",
+  "moveInDate",
+  "contractFlex",
+  "accessHours",
+  "parkingType",
+  "layoutType",
+  "advertiser",
+  "includeOperatingCosts",
+  "accessibilityAdapted",
+  "ecoCertified",
+  "amenityQuery",
+  "furnishedFilter"
+];
+
+function mergeAiChangedChipEntries(baseEntries, aiChangedChipEntries = []) {
+  const mergedByKey = new Map(baseEntries.map((entry) => [entry.key, entry]));
+  aiChangedChipEntries.forEach((entry) => {
+    if (!entry?.key || !entry?.label) return;
+    mergedByKey.set(entry.key, { key: entry.key, label: entry.label });
+  });
+  return Array.from(mergedByKey.values()).sort((left, right) => {
+    const leftIndex = SEARCH_CHIP_ORDER.indexOf(left.key);
+    const rightIndex = SEARCH_CHIP_ORDER.indexOf(right.key);
+    const normalizedLeft = leftIndex === -1 ? SEARCH_CHIP_ORDER.length : leftIndex;
+    const normalizedRight = rightIndex === -1 ? SEARCH_CHIP_ORDER.length : rightIndex;
+    return normalizedLeft - normalizedRight;
+  });
+}
+
+function buildDisplayedSearchChipEntries(searchMeta, defaultMaxBudget) {
+  const baseEntries = buildSearchChipEntries(searchMeta, defaultMaxBudget);
+  return mergeAiChangedChipEntries(baseEntries, searchMeta?.aiChangedChipEntries || []);
+}
+
+function getChangedChipKeys(previousMeta, nextMeta, defaultMaxBudget) {
+  const previousEntries = buildSearchChipEntries(previousMeta, defaultMaxBudget);
+  const nextEntries = buildSearchChipEntries(nextMeta, defaultMaxBudget);
+  const previousByKey = new Map(previousEntries.map((entry) => [entry.key, entry.label]));
+  const nextByKey = new Map(nextEntries.map((entry) => [entry.key, entry.label]));
+  const allKeys = new Set([...previousByKey.keys(), ...nextByKey.keys()]);
+  return Array.from(allKeys).filter((key) => previousByKey.get(key) !== nextByKey.get(key));
+}
+
+function buildAiChangedChipEntriesFromSummary(summary) {
+  const parts = String(summary || "")
+    .split(" • ")
+    .map((item) => item.trim())
+    .filter(Boolean);
+
+  const entries = [];
+  parts.forEach((item) => {
+    let key = "";
+    if (item.startsWith("Område:")) key = "district";
+    else if (item.startsWith("Typ:")) key = "type";
+    else if (item.startsWith("Platser:")) key = "teamSize";
+    else if (item.startsWith("Yta:")) key = "size";
+    else if (item.startsWith("Budget:")) key = "budget";
+    else if (item.startsWith("Kommunaltrafik:")) key = "transitDistance";
+    else if (item.startsWith("Inflyttning:") || item.startsWith("Inflytt:")) key = "moveInDate";
+    else if (item.startsWith("Avtal:")) key = "contractFlex";
+    else if (item.startsWith("Access:")) key = "accessHours";
+    else if (item.startsWith("Parkering:")) key = "parkingType";
+    else if (item.startsWith("Planlösning:")) key = "layoutType";
+    else if (item.startsWith("Annonsör:")) key = "advertiser";
+    else if (item.startsWith("Driftkostnad") || item.startsWith("Driftkostnader")) key = "includeOperatingCosts";
+    else if (item.startsWith("Tillgänglighet") || item.startsWith("Tillgänglighetsanpassad")) key = "accessibilityAdapted";
+    else if (item.startsWith("Miljöcertifierad") || item.startsWith("Miljöcertifiering")) key = "ecoCertified";
+    else if (item.startsWith("Bekvämligheter:") || item.startsWith("Bekvämlighet:")) key = "amenityQuery";
+    else if (item.startsWith("Möblering:") || item === "Möblerad" || item === "Ej möblerad") key = "furnishedFilter";
+    if (!key) return;
+    entries.push({ key, label: item });
+  });
+  return entries;
 }
 
 function formatSuggestionChanges(candidate, baseline) {
@@ -640,6 +727,9 @@ function formatSuggestionChanges(candidate, baseline) {
   if (nextType !== baseType) {
     parts.push(`Typ: ${nextType}`);
   }
+  if ((nextFilters.teamSize || "") !== (baseFilters.teamSize || "")) {
+    parts.push(`Platser: ${nextFilters.teamSize || "utan minimikrav"}`);
+  }
   if ((nextFilters.minSize || "") !== (baseFilters.minSize || "") || (nextFilters.maxSize || "") !== (baseFilters.maxSize || "")) {
     parts.push(`Yta: ${nextFilters.minSize || "min valfri"} - ${nextFilters.maxSize || "max valfri"}`);
   }
@@ -654,6 +744,12 @@ function formatSuggestionChanges(candidate, baseline) {
   }
   if ((nextFilters.transitDistance || "") !== (baseFilters.transitDistance || "")) {
     parts.push(`Kommunaltrafik: ${nextFilters.transitDistance || "alla avstånd"}`);
+  }
+  if ((nextFilters.accessHours || "") !== (baseFilters.accessHours || "")) {
+    parts.push(`Access: ${nextFilters.accessHours || "alla tider"}`);
+  }
+  if ((nextFilters.parkingType || "") !== (baseFilters.parkingType || "")) {
+    parts.push(`Parkering: ${nextFilters.parkingType || "alla alternativ"}`);
   }
   if ((nextFilters.layoutType || "") !== (baseFilters.layoutType || "")) {
     parts.push(`Planlösning: ${nextFilters.layoutType || "alla"}`);
@@ -679,6 +775,324 @@ function formatSuggestionChanges(candidate, baseline) {
 
   if (parts.length === 0) return candidate?.preview || "";
   return parts.join(" • ");
+}
+
+function joinSuggestionLabels(values) {
+  const items = values.map((value) => String(value || "").trim()).filter(Boolean);
+  if (items.length === 0) return "";
+  if (items.length === 1) return items[0];
+  if (items.length === 2) return `${items[0]} och ${items[1]}`;
+  return `${items.slice(0, -1).join(", ")} och ${items.at(-1)}`;
+}
+
+function getFurnishedLabel(value) {
+  if (value === "yes") return "Möblerad";
+  if (value === "no") return "Omöblerad";
+  return "Alla";
+}
+
+function formatRangeLabel(minValue, maxValue, unit) {
+  const min = String(minValue || "").trim();
+  const max = String(maxValue || "").trim();
+  if (!min && !max) return "";
+  return `${min || "min valfri"}-${max || "max valfri"} ${unit}`;
+}
+
+function buildResultsSuggestionCandidates({
+  baseFilters,
+  baseAmenityQuery,
+  baseFurnished,
+  defaultMaxBudget
+}) {
+  const defaultBudget = Number(defaultMaxBudget || 250000);
+  const amenityTerms = parseAmenityTerms(baseAmenityQuery);
+  const typeLabel = Array.isArray(baseFilters.type) && baseFilters.type.length > 0
+    ? joinSuggestionLabels(baseFilters.type)
+    : "";
+  const minBudgetValue = String(baseFilters.minBudget || "").trim();
+  const maxBudgetValue = String(baseFilters.maxBudget || "").trim();
+  const defaultBudgetValue = String(defaultBudget || "").trim();
+  const hasExplicitBudget = minBudgetValue !== "" || (maxBudgetValue !== "" && maxBudgetValue !== defaultBudgetValue);
+  const nextBudgetMax = Math.max(
+    Number.isFinite(Number(baseFilters.maxBudget)) && Number(baseFilters.maxBudget) > 0
+      ? Math.round(Number(baseFilters.maxBudget) * 1.2)
+      : 0,
+    Number.isFinite(Number(baseFilters.maxBudget)) && Number(baseFilters.maxBudget) > 0
+      ? Number(baseFilters.maxBudget) + 10000
+      : defaultBudget
+  );
+  const fullyRelaxedFilters = {
+    ...baseFilters,
+    district: "Alla",
+    type: [],
+    teamSize: "",
+    minSize: "",
+    maxSize: "",
+    minBudget: "",
+    maxBudget: String(defaultBudget),
+    moveInDate: "",
+    contractFlex: "",
+    transitDistance: "",
+    accessHours: "",
+    parkingType: "",
+    layoutType: "",
+    advertiser: "Alla",
+    includeOperatingCosts: false,
+    accessibilityAdapted: false,
+    ecoCertified: false
+  };
+
+  const explicitCandidates = [
+    baseFurnished !== "all"
+      ? {
+          id: "furnished-all",
+          title: `Möblering är satt till ${getFurnishedLabel(baseFurnished)}`,
+          detail: `Kravet på ${getFurnishedLabel(baseFurnished).toLowerCase()} begränsar resultaten just nu. Om du öppnar upp till alla möbleringsalternativ kan fler lokaler visas.`,
+          suggestedChange: "Möblering: Alla",
+          targetStep: "core",
+          nextFilters: { ...baseFilters },
+          nextAmenityQuery: baseAmenityQuery,
+          nextFurnishedFilter: "all"
+        }
+      : null,
+    amenityTerms.length > 0
+      ? {
+          id: "amenities-clear",
+          title: `Bekvämligheter är satt till ${joinSuggestionLabels(amenityTerms)}`,
+          detail: `De här bekvämlighetskraven begränsar resultaten just nu. Om du gör dem valfria kan fler lokaler visas.`,
+          suggestedChange: "Bekvämligheter: inga specifika krav",
+          targetStep: "amenities",
+          nextFilters: { ...baseFilters },
+          nextAmenityQuery: "",
+          nextFurnishedFilter: baseFurnished
+        }
+      : null,
+    baseFilters.district && baseFilters.district !== "Alla"
+      ? {
+          id: "district-all",
+          title: `Område är satt till ${baseFilters.district}`,
+          detail: `Det här områdeskravet begränsar resultaten just nu. Om du breddar till alla områden kan fler lokaler visas.`,
+          suggestedChange: "Område: Alla områden",
+          targetStep: "core",
+          nextFilters: { ...baseFilters, district: "Alla" },
+          nextAmenityQuery: baseAmenityQuery,
+          nextFurnishedFilter: baseFurnished
+        }
+      : null,
+    typeLabel
+      ? {
+          id: "type-all",
+          title: `Typ är satt till ${typeLabel}`,
+          detail: `Det här typkravet begränsar resultaten just nu. Om du öppnar upp till fler lokaltyper kan fler lokaler visas.`,
+          suggestedChange: "Typ: Alla typer",
+          targetStep: "type",
+          nextFilters: { ...baseFilters, type: [] },
+          nextAmenityQuery: baseAmenityQuery,
+          nextFurnishedFilter: baseFurnished
+        }
+      : null,
+    baseFilters.layoutType
+      ? {
+          id: "layout-clear",
+          title: `Planlösning är satt till ${baseFilters.layoutType}`,
+          detail: `Det här planlösningskravet begränsar resultaten just nu. Om du gör planlösning valfri kan fler lokaler visas.`,
+          suggestedChange: "Planlösning: Alla",
+          targetStep: "type",
+          nextFilters: { ...baseFilters, layoutType: "" },
+          nextAmenityQuery: baseAmenityQuery,
+          nextFurnishedFilter: baseFurnished
+        }
+      : null,
+    String(baseFilters.teamSize || "").trim()
+      ? {
+          id: "team-clear",
+          title: `Platser är satt till minst ${baseFilters.teamSize} st`,
+          detail: `Det här platskravet begränsar resultaten just nu. Om du sänker eller tar bort minimikravet kan fler lokaler visas.`,
+          suggestedChange: "Platser: utan minimikrav",
+          targetStep: "core",
+          nextFilters: { ...baseFilters, teamSize: "" },
+          nextAmenityQuery: baseAmenityQuery,
+          nextFurnishedFilter: baseFurnished
+        }
+      : null,
+    (baseFilters.minSize || baseFilters.maxSize)
+      ? {
+          id: "size-clear",
+          title: `Yta är satt till ${formatRangeLabel(baseFilters.minSize, baseFilters.maxSize, "kvm")}`,
+          detail: `Det här ytkravet begränsar resultaten just nu. Om du gör ytan mer flexibel kan fler lokaler visas.`,
+          suggestedChange: "Yta: valfri",
+          targetStep: "size",
+          nextFilters: { ...baseFilters, minSize: "", maxSize: "" },
+          nextAmenityQuery: baseAmenityQuery,
+          nextFurnishedFilter: baseFurnished
+        }
+      : null,
+    hasExplicitBudget
+      ? {
+          id: "budget-clear",
+          title: `Budget är satt till ${formatRangeLabel(baseFilters.minBudget, baseFilters.maxBudget, "kr")}`,
+          detail: `Det här budgetkravet begränsar resultaten just nu. Om du gör budgeten mer flexibel kan fler lokaler visas.`,
+          suggestedChange: "Budget: valfri",
+          targetStep: "budget",
+          nextFilters: { ...baseFilters, minBudget: "", maxBudget: String(defaultBudget) },
+          nextAmenityQuery: baseAmenityQuery,
+          nextFurnishedFilter: baseFurnished
+        }
+      : null,
+    baseFilters.moveInDate
+      ? {
+          id: "movein-clear",
+          title: `Inflyttning är satt till ${baseFilters.moveInDate}`,
+          detail: `Det fasta inflyttningsdatumet begränsar resultaten just nu. Om du gör datumet flexibelt kan fler lokaler visas.`,
+          suggestedChange: "Inflyttning: flexibelt datum",
+          targetStep: "moveAndContract",
+          nextFilters: { ...baseFilters, moveInDate: "" },
+          nextAmenityQuery: baseAmenityQuery,
+          nextFurnishedFilter: baseFurnished
+        }
+      : null,
+    baseFilters.contractFlex
+      ? {
+          id: "contract-clear",
+          title: `Avtal är satt till ${baseFilters.contractFlex}`,
+          detail: `Det här avtalskravet begränsar resultaten just nu. Om du gör avtalet mer flexibelt kan fler lokaler visas.`,
+          suggestedChange: "Avtal: Alla",
+          targetStep: "moveAndContract",
+          nextFilters: { ...baseFilters, contractFlex: "" },
+          nextAmenityQuery: baseAmenityQuery,
+          nextFurnishedFilter: baseFurnished
+        }
+      : null,
+    baseFilters.transitDistance
+      ? {
+          id: "transit-clear",
+          title: `Kommunaltrafik är satt till ${baseFilters.transitDistance}`,
+          detail: `Det här avståndskravet till kommunaltrafik begränsar resultaten just nu. Om du öppnar upp till alla avstånd kan fler lokaler visas.`,
+          suggestedChange: "Kommunaltrafik: Alla",
+          targetStep: "amenities",
+          nextFilters: { ...baseFilters, transitDistance: "" },
+          nextAmenityQuery: baseAmenityQuery,
+          nextFurnishedFilter: baseFurnished
+        }
+      : null,
+    baseFilters.parkingType
+      ? {
+          id: "parking-clear",
+          title: `Parkering är satt till ${baseFilters.parkingType}`,
+          detail: `Det här parkeringskravet begränsar resultaten just nu. Om du gör parkering valfri kan fler lokaler visas.`,
+          suggestedChange: "Parkering: Alla",
+          targetStep: "amenities",
+          nextFilters: { ...baseFilters, parkingType: "" },
+          nextAmenityQuery: baseAmenityQuery,
+          nextFurnishedFilter: baseFurnished
+        }
+      : null,
+    baseFilters.accessHours
+      ? {
+          id: "access-clear",
+          title: `Access är satt till ${baseFilters.accessHours}`,
+          detail: `Det här accesskravet begränsar resultaten just nu. Om du gör access mer flexibel kan fler lokaler visas.`,
+          suggestedChange: "Access: Alla",
+          targetStep: "accessAndAdvertiser",
+          nextFilters: { ...baseFilters, accessHours: "" },
+          nextAmenityQuery: baseAmenityQuery,
+          nextFurnishedFilter: baseFurnished
+        }
+      : null,
+    baseFilters.advertiser && baseFilters.advertiser !== "Alla"
+      ? {
+          id: "advertiser-clear",
+          title: `Annonsör är satt till ${baseFilters.advertiser}`,
+          detail: `Det här annonsörskravet begränsar resultaten just nu. Om du öppnar upp till alla annonsörer kan fler lokaler visas.`,
+          suggestedChange: "Annonsör: Alla",
+          targetStep: "accessAndAdvertiser",
+          nextFilters: { ...baseFilters, advertiser: "Alla" },
+          nextAmenityQuery: baseAmenityQuery,
+          nextFurnishedFilter: baseFurnished
+        }
+      : null,
+    baseFilters.includeOperatingCosts
+      ? {
+          id: "operating-clear",
+          title: "Driftkostnader ingår är aktiverat",
+          detail: "Det här kravet begränsar resultaten just nu. Om du gör driftkostnader valfria kan fler lokaler visas.",
+          suggestedChange: "Driftkostnader: valfritt",
+          targetStep: "compliance",
+          nextFilters: { ...baseFilters, includeOperatingCosts: false },
+          nextAmenityQuery: baseAmenityQuery,
+          nextFurnishedFilter: baseFurnished
+        }
+      : null,
+    baseFilters.accessibilityAdapted
+      ? {
+          id: "accessibility-clear",
+          title: "Tillgänglighetsanpassad är aktiverat",
+          detail: "Det här kravet begränsar resultaten just nu. Om du gör tillgänglighetskravet valfritt kan fler lokaler visas.",
+          suggestedChange: "Tillgänglighet: valfritt",
+          targetStep: "compliance",
+          nextFilters: { ...baseFilters, accessibilityAdapted: false },
+          nextAmenityQuery: baseAmenityQuery,
+          nextFurnishedFilter: baseFurnished
+        }
+      : null,
+    baseFilters.ecoCertified
+      ? {
+          id: "eco-clear",
+          title: "Miljöcertifierad är aktiverat",
+          detail: "Det här kravet begränsar resultaten just nu. Om du gör miljöcertifiering valfri kan fler lokaler visas.",
+          suggestedChange: "Miljöcertifiering: valfritt",
+          targetStep: "compliance",
+          nextFilters: { ...baseFilters, ecoCertified: false },
+          nextAmenityQuery: baseAmenityQuery,
+          nextFurnishedFilter: baseFurnished
+        }
+      : null
+  ].filter(Boolean);
+
+  const fallbackCandidates = [
+    amenityTerms.length > 0 || (baseFilters.district && baseFilters.district !== "Alla")
+      ? {
+          id: "district-amenities-combo",
+          title: "Område och bekvämligheter är för snäva tillsammans",
+          detail: `Kombinationen av ${baseFilters.district && baseFilters.district !== "Alla" ? `område ${baseFilters.district}` : "nuvarande område"}${amenityTerms.length > 0 ? ` och bekvämligheterna ${joinSuggestionLabels(amenityTerms)}` : ""} ger för få träffar. Om du öppnar upp båda samtidigt kan fler lokaler visas.`,
+          suggestedChange: "Område: Alla områden • Bekvämligheter: inga specifika krav",
+          targetStep: amenityTerms.length > 0 ? "amenities" : "core",
+          nextFilters: { ...baseFilters, district: "Alla" },
+          nextAmenityQuery: "",
+          nextFurnishedFilter: baseFurnished
+        }
+      : null,
+    (baseFilters.minSize || baseFilters.maxSize || hasExplicitBudget)
+      ? {
+          id: "size-budget-combo",
+          title: "Yta och budget är för snäva tillsammans",
+          detail: "Kombinationen av nuvarande yta och budget ger för få träffar. Om du gör båda mer flexibla kan fler lokaler visas.",
+          suggestedChange: "Yta: valfri • Budget: bredare intervall",
+          targetStep: "size",
+          nextFilters: {
+            ...baseFilters,
+            minSize: "",
+            maxSize: "",
+            minBudget: "",
+            maxBudget: String(Math.max(nextBudgetMax, defaultBudget))
+          },
+          nextAmenityQuery: baseAmenityQuery,
+          nextFurnishedFilter: baseFurnished
+        }
+      : null,
+    {
+      id: "reset-to-broad",
+      title: "Sökningen är för snäv totalt sett",
+      detail: "Flera aktiva krav samverkar och ger för få träffar. Om du gör sökningen bredare kan fler lokaler visas direkt.",
+      suggestedChange: "Bredare sökning med färre begränsningar",
+      targetStep: "core",
+      nextFilters: fullyRelaxedFilters,
+      nextAmenityQuery: "",
+      nextFurnishedFilter: "all"
+    }
+  ].filter(Boolean);
+
+  return { explicitCandidates, fallbackCandidates };
 }
 
 function RentPage({ app, isGuest = false, onRequireAuth }) {
@@ -713,7 +1127,9 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
     amenityQuery: "",
     furnishedFilter: "all",
     aiPrompt: "",
-    aiSuggestionLabel: ""
+    aiSuggestionLabel: "",
+    aiChangedChipKeys: [],
+    aiChangedChipEntries: []
   });
   const [bookingListing, setBookingListing] = useState(null);
   const [selectedMapListing, setSelectedMapListing] = useState(null);
@@ -733,8 +1149,14 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
     amenityQuery: "",
     furnishedFilter: "all",
     aiPrompt: "",
-    matchCount: null
+    matchCount: null,
+    aiChangedChipKeys: [],
+    aiChangedChipEntries: []
   });
+  const [aiGuideStepRequest, setAiGuideStepRequest] = useState(null);
+  const [resultsSuggestion, setResultsSuggestion] = useState(null);
+  const [resultsSuggestionLoading, setResultsSuggestionLoading] = useState(false);
+  const [dismissedResultsSuggestionKey, setDismissedResultsSuggestionKey] = useState("");
   const [noMatchSuggestions, setNoMatchSuggestions] = useState([]);
   const [noMatchSuggestionsLoading, setNoMatchSuggestionsLoading] = useState(false);
   const landingSearchAppliedRef = useRef(false);
@@ -742,6 +1164,7 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
   const closeEditorTimerRef = useRef(null);
   const summaryFadeTimerRef = useRef(null);
   const availableTransitionTimerRef = useRef(null);
+  const resultsSuggestionRequestRef = useRef(0);
   const availableEnterTimerRef = useRef(null);
   const resetToAvailableTimerRef = useRef(null);
   const sidePanelSwitchTimerRef = useRef(null);
@@ -752,6 +1175,10 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
   const resultsTopRef = useRef(null);
 
   const favoriteIds = useMemo(() => new Set(favorites.map((entry) => entry.listingId)), [favorites]);
+  const hasTeamSizeForMatchChip = useMemo(() => {
+    const parsed = Number(String(filters.teamSize || "").trim());
+    return Number.isFinite(parsed) && parsed > 0;
+  }, [filters.teamSize]);
   const listingsById = useMemo(() => new Map(listings.map((item) => [item.id, item])), [listings]);
   const advertiserOptions = useMemo(() => {
     const names = Array.from(new Set(listings.map((item) => item.advertiserName).filter(Boolean)));
@@ -981,7 +1408,9 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
           amenityQuery: "",
           furnishedFilter: "all",
           aiPrompt: "",
-          matchCount: null
+          matchCount: null,
+          aiChangedChipKeys: [],
+          aiChangedChipEntries: []
         });
       }
       setEditorModeOpacity(1);
@@ -1009,22 +1438,26 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
     setFilters(nextFilters);
     setAmenityQuery(nextAmenityTerms);
     setFurnishedFilter(nextFurnishedFilter);
-    setAiLivePreview({
+    setAiLivePreview((prev) => ({
       filters: nextFilters,
       amenityQuery: nextAmenityTerms,
       furnishedFilter: nextFurnishedFilter,
       aiPrompt: nextPrompt,
-      matchCount: null
-    });
+      matchCount: null,
+      aiChangedChipKeys: prev.aiChangedChipKeys || [],
+      aiChangedChipEntries: prev.aiChangedChipEntries || []
+    }));
     const listingData = await searchListings(nextFilters);
     const narrowed = applyAmenityAndFurnishedFilters(listingData, nextAmenityTerms, nextFurnishedFilter);
-    setAiLivePreview({
+    setAiLivePreview((prev) => ({
       filters: nextFilters,
       amenityQuery: nextAmenityTerms,
       furnishedFilter: nextFurnishedFilter,
       aiPrompt: nextPrompt,
-      matchCount: narrowed.length
-    });
+      matchCount: narrowed.length,
+      aiChangedChipKeys: prev.aiChangedChipKeys || [],
+      aiChangedChipEntries: prev.aiChangedChipEntries || []
+    }));
     return narrowed.length;
   }
 
@@ -1054,7 +1487,9 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
         amenityQuery: mergedAmenityTerms,
         furnishedFilter: assistantFurnishedFilter,
         aiPrompt: prompt,
-        matchCount: null
+        matchCount: null,
+        aiChangedChipKeys: [],
+        aiChangedChipEntries: []
       });
       await executeSearch(nextFilters, {
         aiPrompt: prompt,
@@ -1066,7 +1501,9 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
         amenityQuery: "",
         furnishedFilter: "all",
         aiPrompt: "",
-        matchCount: null
+        matchCount: null,
+        aiChangedChipKeys: [],
+        aiChangedChipEntries: []
       });
       if (isAvailableListingsView) {
         transitionFromAvailableToResults();
@@ -1090,7 +1527,9 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
       amenityQuery: "",
       furnishedFilter: "all",
       aiPrompt: "",
-      matchCount: null
+      matchCount: null,
+      aiChangedChipKeys: [],
+      aiChangedChipEntries: []
     });
     await executeSearch(filters, { amenityQuery: amenityTerms, furnishedFilter });
     if (isAvailableListingsView) {
@@ -1170,7 +1609,9 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
         amenityQuery: "",
         furnishedFilter: "all",
         aiPrompt: "",
-        matchCount: null
+        matchCount: null,
+        aiChangedChipKeys: [],
+        aiChangedChipEntries: []
       });
       return;
     }
@@ -1184,6 +1625,19 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
       transitionFromAvailableToResults();
     }
   }
+
+  useEffect(() => {
+    if (showEditorAiPanel || sidePanelMode !== "filter") return undefined;
+    const timer = window.setTimeout(() => {
+      void (async () => {
+        await executeSearch(filters, { amenityQuery, furnishedFilter });
+        if (isAvailableListingsView) {
+          transitionFromAvailableToResults();
+        }
+      })();
+    }, 220);
+    return () => window.clearTimeout(timer);
+  }, [showEditorAiPanel, sidePanelMode, filters, amenityQuery, furnishedFilter, isAvailableListingsView]);
 
   async function executeSearch(nextFilters = filters, options = {}) {
     await searchListings(nextFilters);
@@ -1199,7 +1653,9 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
       amenityQuery: amenityValue,
       furnishedFilter: furnishedValue,
       aiPrompt: options.aiPrompt || "",
-      aiSuggestionLabel: options.aiSuggestionLabel || ""
+      aiSuggestionLabel: options.aiSuggestionLabel || "",
+      aiChangedChipKeys: Array.isArray(options.aiChangedChipKeys) ? options.aiChangedChipKeys : [],
+      aiChangedChipEntries: Array.isArray(options.aiChangedChipEntries) ? options.aiChangedChipEntries : []
     });
   }
 
@@ -1227,7 +1683,9 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
       amenityQuery: "",
       furnishedFilter: "all",
       aiPrompt: "",
-      matchCount: null
+      matchCount: null,
+      aiChangedChipKeys: [],
+      aiChangedChipEntries: []
     });
     setAiGuideResetKey((value) => value + 1);
     transitionFromResultsToAvailable();
@@ -1293,7 +1751,9 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
       amenityQuery: amenityFromUrl || "",
       furnishedFilter: furnishedFromUrl === "yes" || furnishedFromUrl === "no" ? furnishedFromUrl : "all",
       aiPrompt: aiPromptFromUrl || "",
-      aiSuggestionLabel: ""
+      aiSuggestionLabel: "",
+      aiChangedChipKeys: [],
+      aiChangedChipEntries: []
     });
 
     async function bootstrapFromLandingSearch() {
@@ -1350,17 +1810,29 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
   }, [sortedListings, effectiveAmenityQuery, effectiveFurnishedFilter]);
 
   const activeSearchChips = useMemo(() => {
-    return buildSearchChips(appliedSearchMeta, app.defaultFilters?.maxBudget);
-  }, [appliedSearchMeta, app.defaultFilters?.maxBudget]);
+    const useLiveFilterChips = showInlineAiGuide && !showEditorAiPanel;
+    const chipMeta = useLiveFilterChips
+      ? {
+          ...appliedSearchMeta,
+          filters,
+          amenityQuery,
+          furnishedFilter
+        }
+      : appliedSearchMeta;
+    return buildDisplayedSearchChipEntries(chipMeta, app.defaultFilters?.maxBudget);
+  }, [appliedSearchMeta, app.defaultFilters?.maxBudget, showInlineAiGuide, showEditorAiPanel, filters, amenityQuery, furnishedFilter]);
 
   const liveAiChips = useMemo(() => {
     if (!useLiveAiSearchMeta) return [];
-    return buildSearchChips(
+    return buildDisplayedSearchChipEntries(
       {
         filters: effectiveFilters,
         amenityQuery: effectiveAmenityQuery,
         furnishedFilter: effectiveFurnishedFilter,
-        aiPrompt: effectiveAiPrompt
+        aiPrompt: effectiveAiPrompt,
+        aiChangedChipEntries: aiLivePreview.aiChangedChipEntries && aiLivePreview.aiChangedChipEntries.length > 0
+          ? aiLivePreview.aiChangedChipEntries
+          : (appliedSearchMeta.aiChangedChipEntries || [])
       },
       app.defaultFilters?.maxBudget
     );
@@ -1370,11 +1842,34 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
     effectiveAmenityQuery,
     effectiveFurnishedFilter,
     effectiveAiPrompt,
+    aiLivePreview.aiChangedChipEntries,
+    appliedSearchMeta.aiChangedChipEntries,
     app.defaultFilters?.maxBudget
   ]);
   const displayedAiPrompt = useLiveAiSearchMeta ? effectiveAiPrompt : (appliedSearchMeta.aiPrompt || "");
   const displayedSearchChips = useLiveAiSearchMeta ? liveAiChips : activeSearchChips;
-  const displayedAiSuggestionLabel = String(appliedSearchMeta.aiSuggestionLabel || "").trim();
+  const displayedAiChangedChipKeys = useMemo(() => {
+    const activeKeys = useLiveAiSearchMeta
+      ? ((aiLivePreview.aiChangedChipKeys && aiLivePreview.aiChangedChipKeys.length > 0)
+        ? aiLivePreview.aiChangedChipKeys
+        : (appliedSearchMeta.aiChangedChipKeys || []))
+      : (appliedSearchMeta.aiChangedChipKeys || []);
+    const activeEntries = useLiveAiSearchMeta
+      ? ((aiLivePreview.aiChangedChipEntries && aiLivePreview.aiChangedChipEntries.length > 0)
+        ? aiLivePreview.aiChangedChipEntries
+        : (appliedSearchMeta.aiChangedChipEntries || []))
+      : (appliedSearchMeta.aiChangedChipEntries || []);
+    return Array.from(new Set([
+      ...activeKeys,
+      ...activeEntries.map((entry) => entry.key).filter(Boolean)
+    ]));
+  }, [
+    useLiveAiSearchMeta,
+    aiLivePreview.aiChangedChipKeys,
+    aiLivePreview.aiChangedChipEntries,
+    appliedSearchMeta.aiChangedChipKeys,
+    appliedSearchMeta.aiChangedChipEntries
+  ]);
   const hasBegunSearch = Boolean(String(displayedAiPrompt || "").trim()) || displayedSearchChips.length > 0;
   const noMatchSuggestionSignature = useMemo(
     () =>
@@ -1446,33 +1941,18 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
       ecoCertified: false
     };
 
-    const candidates = [
+    const minBudgetValue = String(baseFilters.minBudget || "").trim();
+    const maxBudgetValue = String(baseFilters.maxBudget || "").trim();
+    const defaultBudgetValue = String(defaultMaxBudget || "").trim();
+    const hasExplicitBudget = minBudgetValue !== "" || (maxBudgetValue !== "" && maxBudgetValue !== defaultBudgetValue);
+
+    const explicitCandidates = [
       baseFilters.district && baseFilters.district !== "Alla"
         ? {
             id: "district-all",
             label: "Bredda område",
             preview: "Område: alla områden",
             nextFilters: { ...baseFilters, district: "Alla" },
-            nextAmenityQuery: baseAmenityQuery,
-            nextFurnishedFilter: baseFurnished
-          }
-        : null,
-      String(baseAmenityQuery).trim()
-        ? {
-            id: "amenities-clear",
-            label: "Minska bekvämlighetskrav",
-            preview: "Bekvämligheter: inga specifika krav",
-            nextFilters: { ...baseFilters },
-            nextAmenityQuery: "",
-            nextFurnishedFilter: baseFurnished
-          }
-        : null,
-      nextBudgetMax > currentMaxBudget
-        ? {
-            id: "budget-raise",
-            label: "Höj budgettak",
-            preview: `Maxbudget: ${nextBudgetMax.toLocaleString("sv-SE")} kr`,
-            nextFilters: { ...baseFilters, maxBudget: String(nextBudgetMax) },
             nextAmenityQuery: baseAmenityQuery,
             nextFurnishedFilter: baseFurnished
           }
@@ -1487,6 +1967,40 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
             nextFurnishedFilter: baseFurnished
           }
         : null,
+      String(baseFilters.teamSize || "").trim()
+        ? {
+            id: "team-clear",
+            label: "Minska platskrav",
+            preview: "Platser: utan minimikrav",
+            nextFilters: { ...baseFilters, teamSize: "" },
+            nextAmenityQuery: baseAmenityQuery,
+            nextFurnishedFilter: baseFurnished
+          }
+        : null,
+      (baseFilters.minSize || baseFilters.maxSize)
+        ? {
+            id: "size-clear",
+            label: "Bredda yta",
+            preview: "Yta: valfri",
+            nextFilters: { ...baseFilters, minSize: "", maxSize: "" },
+            nextAmenityQuery: baseAmenityQuery,
+            nextFurnishedFilter: baseFurnished
+          }
+        : null,
+      hasExplicitBudget
+        ? {
+            id: "budget-clear",
+            label: "Minska budgetkrav",
+            preview: "Budget: valfri",
+            nextFilters: {
+              ...baseFilters,
+              minBudget: "",
+              maxBudget: String(defaultMaxBudget || 250000)
+            },
+            nextAmenityQuery: baseAmenityQuery,
+            nextFurnishedFilter: baseFurnished
+          }
+        : null,
       baseFilters.moveInDate
         ? {
             id: "movein-clear",
@@ -1497,6 +2011,119 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
             nextFurnishedFilter: baseFurnished
           }
         : null,
+      baseFilters.contractFlex
+        ? {
+            id: "contract-clear",
+            label: "Minska avtalskrav",
+            preview: "Avtal: mer flexibelt",
+            nextFilters: { ...baseFilters, contractFlex: "" },
+            nextAmenityQuery: baseAmenityQuery,
+            nextFurnishedFilter: baseFurnished
+          }
+        : null,
+      baseFilters.transitDistance
+        ? {
+            id: "transit-clear",
+            label: "Minska krav på kommunaltrafik",
+            preview: "Kommunaltrafik: alla avstånd",
+            nextFilters: { ...baseFilters, transitDistance: "" },
+            nextAmenityQuery: baseAmenityQuery,
+            nextFurnishedFilter: baseFurnished
+          }
+        : null,
+      baseFilters.parkingType
+        ? {
+            id: "parking-clear",
+            label: "Minska parkeringskrav",
+            preview: "Parkering: alla alternativ",
+            nextFilters: { ...baseFilters, parkingType: "" },
+            nextAmenityQuery: baseAmenityQuery,
+            nextFurnishedFilter: baseFurnished
+          }
+        : null,
+      baseFilters.layoutType
+        ? {
+            id: "layout-clear",
+            label: "Minska planlösningskrav",
+            preview: "Planlösning: alla alternativ",
+            nextFilters: { ...baseFilters, layoutType: "" },
+            nextAmenityQuery: baseAmenityQuery,
+            nextFurnishedFilter: baseFurnished
+          }
+        : null,
+      baseFilters.accessHours
+        ? {
+            id: "access-clear",
+            label: "Minska accesskrav",
+            preview: "Access: alla tider",
+            nextFilters: { ...baseFilters, accessHours: "" },
+            nextAmenityQuery: baseAmenityQuery,
+            nextFurnishedFilter: baseFurnished
+          }
+        : null,
+      baseFilters.advertiser && baseFilters.advertiser !== "Alla"
+        ? {
+            id: "advertiser-clear",
+            label: "Minska annonsörskrav",
+            preview: "Annonsör: alla",
+            nextFilters: { ...baseFilters, advertiser: "Alla" },
+            nextAmenityQuery: baseAmenityQuery,
+            nextFurnishedFilter: baseFurnished
+          }
+        : null,
+      baseFilters.includeOperatingCosts
+        ? {
+            id: "operating-clear",
+            label: "Minska krav på driftkostnad",
+            preview: "Driftkostnad: valfri",
+            nextFilters: { ...baseFilters, includeOperatingCosts: false },
+            nextAmenityQuery: baseAmenityQuery,
+            nextFurnishedFilter: baseFurnished
+          }
+        : null,
+      baseFilters.accessibilityAdapted
+        ? {
+            id: "accessibility-clear",
+            label: "Minska tillgänglighetskrav",
+            preview: "Tillgänglighet: valfri",
+            nextFilters: { ...baseFilters, accessibilityAdapted: false },
+            nextAmenityQuery: baseAmenityQuery,
+            nextFurnishedFilter: baseFurnished
+          }
+        : null,
+      baseFilters.ecoCertified
+        ? {
+            id: "eco-clear",
+            label: "Minska miljökrav",
+            preview: "Miljöcertifiering: valfri",
+            nextFilters: { ...baseFilters, ecoCertified: false },
+            nextAmenityQuery: baseAmenityQuery,
+            nextFurnishedFilter: baseFurnished
+          }
+        : null,
+      String(baseAmenityQuery).trim()
+        ? {
+            id: "amenities-clear",
+            label: "Minska bekvämlighetskrav",
+            preview: "Bekvämligheter: inga specifika krav",
+            nextFilters: { ...baseFilters },
+            nextAmenityQuery: "",
+            nextFurnishedFilter: baseFurnished
+          }
+        : null,
+      baseFurnished !== "all"
+        ? {
+            id: "furnished-all",
+            label: "Återställ möblering",
+            preview: "Möblering: alla",
+            nextFilters: { ...baseFilters },
+            nextAmenityQuery: baseAmenityQuery,
+            nextFurnishedFilter: "all"
+          }
+        : null
+    ].filter(Boolean);
+
+    const fallbackCandidates = [
       {
         id: "combo-relax",
         label: "Bredda område och bekvämligheter",
@@ -1539,13 +2166,12 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
         nextAmenityQuery: "",
         nextFurnishedFilter: "all"
       }
-    ].filter(Boolean);
+    ];
 
-    async function buildSuggestions() {
-      setNoMatchSuggestionsLoading(true);
+    async function evaluateCandidates(candidates, limit = 3) {
       const validSuggestions = [];
       for (const candidate of candidates) {
-        if (cancelled || noMatchSuggestionRequestRef.current !== requestId) return;
+        if (cancelled || noMatchSuggestionRequestRef.current !== requestId) return [];
         try {
           const { listings: nextListings } = await listingApi.getListings(candidate.nextFilters);
           const filtered = applyAmenityAndFurnishedFilters(
@@ -1560,11 +2186,18 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
               changeSummary: formatSuggestionChanges(candidate, baselineMeta)
             });
           }
-          if (validSuggestions.length >= 3) break;
+          if (validSuggestions.length >= limit) break;
         } catch (_error) {
           // Ignore individual suggestion failures.
         }
       }
+      return validSuggestions;
+    }
+
+    async function buildSuggestions() {
+      setNoMatchSuggestionsLoading(true);
+      const primary = await evaluateCandidates(explicitCandidates, 3);
+      const validSuggestions = primary.length > 0 ? primary : await evaluateCandidates(fallbackCandidates, 3);
       if (cancelled || noMatchSuggestionRequestRef.current !== requestId) return;
       setNoMatchSuggestions(validSuggestions);
       setNoMatchSuggestionsLoading(false);
@@ -1637,10 +2270,24 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
 
   async function applyNoMatchSuggestion(suggestion) {
     if (!suggestion) return;
+    const previousMeta = {
+      filters: effectiveFilters || filters,
+      amenityQuery: effectiveAmenityQuery || amenityQuery,
+      furnishedFilter: effectiveFurnishedFilter || furnishedFilter
+    };
     const nextFilters = suggestion.nextFilters || filters;
     const nextAmenityQuery = typeof suggestion.nextAmenityQuery === "string" ? suggestion.nextAmenityQuery : amenityQuery;
     const nextFurnishedFilter = suggestion.nextFurnishedFilter || furnishedFilter;
     const nextAiPrompt = String(appliedSearchMeta.aiPrompt || "").trim();
+    const nextMeta = {
+      filters: nextFilters,
+      amenityQuery: nextAmenityQuery,
+      furnishedFilter: nextFurnishedFilter
+    };
+    const aiChangedChipKeys = getChangedChipKeys(previousMeta, nextMeta, app.defaultFilters?.maxBudget);
+    const aiChangedChipEntries = buildAiChangedChipEntriesFromSummary(
+      suggestion.changeSummary || suggestion.suggestedChange || suggestion.preview
+    );
     setFilters(nextFilters);
     setAmenityQuery(nextAmenityQuery);
     setFurnishedFilter(nextFurnishedFilter);
@@ -1649,16 +2296,72 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
       amenityQuery: nextAmenityQuery,
       furnishedFilter: nextFurnishedFilter,
       aiPrompt: nextAiPrompt,
-      matchCount: Number.isFinite(suggestion.count) ? suggestion.count : null
+      matchCount: Number.isFinite(suggestion.count) ? suggestion.count : null,
+      aiChangedChipKeys,
+      aiChangedChipEntries
     });
     await executeSearch(nextFilters, {
       amenityQuery: nextAmenityQuery,
       furnishedFilter: nextFurnishedFilter,
       aiPrompt: nextAiPrompt,
-      aiSuggestionLabel: `AI-förslag: ${suggestion.label}`
+      aiChangedChipKeys,
+      aiChangedChipEntries
     });
     setAiGuideResetKey((value) => value + 1);
     setNoMatchSuggestions([]);
+  }
+
+  function openAiGuideStep(stepId) {
+    if (!stepId) return;
+    setShowEditorAiPanel(true);
+    setSidePanelMode("ai");
+    setAiGuideStepRequest({ stepId, nonce: Date.now() });
+  }
+
+  async function applyResultsSuggestion(suggestion) {
+    if (!suggestion) return;
+    const previousMeta = {
+      filters: effectiveFilters || filters,
+      amenityQuery: effectiveAmenityQuery || amenityQuery,
+      furnishedFilter: effectiveFurnishedFilter || furnishedFilter
+    };
+    const nextFilters = suggestion.nextFilters || filters;
+    const nextAmenityQuery = typeof suggestion.nextAmenityQuery === "string" ? suggestion.nextAmenityQuery : amenityQuery;
+    const nextFurnishedFilter = suggestion.nextFurnishedFilter || furnishedFilter;
+    const nextAiPrompt = String(appliedSearchMeta.aiPrompt || "").trim();
+    const nextMeta = {
+      filters: nextFilters,
+      amenityQuery: nextAmenityQuery,
+      furnishedFilter: nextFurnishedFilter
+    };
+    const aiChangedChipKeys = getChangedChipKeys(previousMeta, nextMeta, app.defaultFilters?.maxBudget);
+    const aiChangedChipEntries = buildAiChangedChipEntriesFromSummary(
+      suggestion.changeSummary || suggestion.suggestedChange || suggestion.preview
+    );
+    setFilters(nextFilters);
+    setAmenityQuery(nextAmenityQuery);
+    setFurnishedFilter(nextFurnishedFilter);
+    setAiLivePreview({
+      filters: nextFilters,
+      amenityQuery: nextAmenityQuery,
+      furnishedFilter: nextFurnishedFilter,
+      aiPrompt: nextAiPrompt,
+      matchCount: Number.isFinite(suggestion.count) ? suggestion.count : null,
+      aiChangedChipKeys,
+      aiChangedChipEntries
+    });
+    await executeSearch(nextFilters, {
+      amenityQuery: nextAmenityQuery,
+      furnishedFilter: nextFurnishedFilter,
+      aiPrompt: nextAiPrompt,
+      aiChangedChipKeys,
+      aiChangedChipEntries
+    });
+    setAiGuideResetKey((value) => value + 1);
+    setDismissedResultsSuggestionKey("");
+    if (isAvailableListingsView) {
+      transitionFromAvailableToResults();
+    }
   }
 
   const showPreferencesSummaryCard = !showSearchEditor
@@ -1670,10 +2373,84 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
   const summaryBaseFilters = showInlineAiGuide ? (effectiveFilters || filters) : (appliedSearchMeta.filters || filters);
   const summaryPrompt = showInlineAiGuide ? String(effectiveAiPrompt || "").trim() : String(appliedSearchMeta.aiPrompt || "").trim();
   const summaryResultCount = aiLivePreview.matchCount ?? visibleListings.length;
+  const visibleResultsSuggestion = resultsSuggestion && resultsSuggestion.key !== dismissedResultsSuggestionKey
+    ? resultsSuggestion
+    : null;
+
+  useEffect(() => {
+    if (!showPreferencesSummaryCard || !hasBegunSearch || summaryResultCount > 3) {
+      setResultsSuggestion(null);
+      setResultsSuggestionLoading(false);
+      return;
+    }
+
+    const requestId = resultsSuggestionRequestRef.current + 1;
+    resultsSuggestionRequestRef.current = requestId;
+    let cancelled = false;
+
+    const baseFilters = { ...(effectiveFilters || filters) };
+    const baseAmenityQuery = String(effectiveAmenityQuery || "");
+    const baseFurnished = effectiveFurnishedFilter || furnishedFilter || "all";
+    const { explicitCandidates, fallbackCandidates } = buildResultsSuggestionCandidates({
+      baseFilters,
+      baseAmenityQuery,
+      baseFurnished,
+      defaultMaxBudget: app.defaultFilters?.maxBudget
+    });
+
+    async function evaluateCandidates(candidates) {
+      for (const candidate of candidates) {
+        if (cancelled || resultsSuggestionRequestRef.current !== requestId) return null;
+        try {
+          const { listings: nextListings } = await listingApi.getListings(candidate.nextFilters);
+          const filtered = applyAmenityAndFurnishedFilters(
+            nextListings,
+            candidate.nextAmenityQuery,
+            candidate.nextFurnishedFilter
+          );
+          if (filtered.length > summaryResultCount) {
+            return {
+              ...candidate,
+              count: filtered.length,
+              key: `${candidate.id}:${candidate.suggestedChange}:${filtered.length}`
+            };
+          }
+        } catch (_error) {
+          // Ignore individual suggestion failures.
+        }
+      }
+      return null;
+    }
+
+    async function buildSuggestion() {
+      setResultsSuggestionLoading(true);
+      const primarySuggestion = await evaluateCandidates(explicitCandidates);
+      const nextSuggestion = primarySuggestion || await evaluateCandidates(fallbackCandidates);
+      if (cancelled || resultsSuggestionRequestRef.current !== requestId) return;
+      setResultsSuggestion(nextSuggestion);
+      setResultsSuggestionLoading(false);
+    }
+
+    void buildSuggestion();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    showPreferencesSummaryCard,
+    hasBegunSearch,
+    summaryResultCount,
+    effectiveFilters,
+    filters,
+    effectiveAmenityQuery,
+    effectiveFurnishedFilter,
+    furnishedFilter,
+    app.defaultFilters?.maxBudget
+  ]);
 
   const preferencesSummaryCard = showPreferencesSummaryCard ? (
     <div
-      className={`rounded-3xl border border-black/15 bg-white p-4 sm:p-5 ${
+      className={`rounded-3xl border border-black/10 bg-white p-4 sm:p-5 ${
         animateSearchSummaryIn ? "search-summary-dissolve-in" : ""
       } ${isResettingToAvailable ? "search-summary-dissolve-out" : ""}`}
     >
@@ -1683,23 +2460,17 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
             <SparklesIcon className="h-4 w-4 text-[#4f46e5]" />
             {summaryResultCount} lokaler matchar dina preferenser
           </p>
-          {displayedSearchChips.length > 0 || displayedAiSuggestionLabel ? (
+          {displayedSearchChips.length > 0 ? (
             <div className="flex flex-wrap gap-2">
-              {displayedAiSuggestionLabel ? (
-                <span className="inline-flex items-center gap-1 rounded-full border border-[#4f46e5]/35 bg-[#eef0ff] px-2.5 py-1 text-xs font-semibold text-[#312e81]">
-                  <SparklesIcon className="h-3.5 w-3.5 text-[#4f46e5]" />
-                  {displayedAiSuggestionLabel}
-                </span>
-              ) : null}
               {displayedSearchChips.map((chip) => (
-                chip.startsWith("AI-förslag:") ? (
-                  <span key={chip} className="inline-flex items-center gap-1 rounded-full border border-[#4f46e5]/35 bg-[#eef0ff] px-2.5 py-1 text-xs font-semibold text-[#312e81]">
+                displayedAiChangedChipKeys.includes(chip.key) ? (
+                  <span key={chip.key} className="inline-flex items-center gap-1 rounded-full border border-[#4f46e5]/35 bg-[#eef0ff] px-2.5 py-1 text-xs font-semibold text-[#312e81]">
                     <SparklesIcon className="h-3.5 w-3.5 text-[#4f46e5]" />
-                    {chip}
+                    {chip.label}
                   </span>
                 ) : (
-                  <span key={chip} className="rounded-full border border-black/10 bg-white px-2.5 py-1 text-xs font-semibold text-ink-700">
-                    {chip}
+                  <span key={chip.key} className="rounded-full border border-black/10 bg-white px-2.5 py-1 text-xs font-semibold text-ink-700">
+                    {chip.label}
                   </span>
                 )
               ))}
@@ -1709,7 +2480,7 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
         <div className="flex flex-wrap items-center justify-end gap-2">
           <button
             type="button"
-            className="inline-flex h-[40px] items-center gap-1.5 rounded-xl border border-black/15 bg-white px-3 text-xs font-semibold text-ink-700 hover:bg-white"
+            className="inline-flex h-[40px] items-center gap-1.5 rounded-xl border border-black/10 bg-white px-3 text-xs font-semibold text-ink-700 hover:bg-white"
             onClick={() => {
               if (isGuest) {
                 openAuthPrompt("save");
@@ -1730,7 +2501,29 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
           </button>
           <button
             type="button"
-            className="inline-flex h-[40px] items-center gap-1.5 rounded-xl border border-black/15 bg-white px-3 text-xs font-semibold text-ink-700 hover:bg-white"
+            className="inline-flex h-[40px] items-center gap-1.5 rounded-xl border border-black/10 bg-white px-3 text-xs font-semibold text-ink-700 hover:bg-white"
+            onClick={() => {
+              if (isGuest) {
+                openAuthPrompt("save");
+                return;
+              }
+              if (summaryPrompt) {
+                saveAiSearch({
+                  prompt: summaryPrompt,
+                  filters: summaryBaseFilters
+                });
+              } else {
+                void saveCurrentFilters(summaryBaseFilters);
+              }
+              app.pushToast("Bevakning aktiverad för sökningen.", "success");
+            }}
+          >
+            <EyeIcon className="h-3.5 w-3.5" />
+            Bevaka sökning
+          </button>
+          <button
+            type="button"
+            className="inline-flex h-[40px] items-center gap-1.5 rounded-xl border border-black/10 bg-white px-3 text-xs font-semibold text-ink-700 hover:bg-white"
             onClick={() => {
               void handleResetSearchResults();
             }}
@@ -1740,6 +2533,59 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
           </button>
         </div>
       </div>
+      {summaryResultCount <= 3 ? (
+        resultsSuggestionLoading ? (
+          <div className="mt-4 rounded-2xl border border-black/10 bg-[#f8f8f6] px-3 py-3 text-sm text-ink-700">
+            AI granskar vilken inställning som begränsar träffarna mest.
+          </div>
+        ) : visibleResultsSuggestion ? (
+          <div className="mt-4 rounded-2xl border border-[#4f46e5]/20 bg-[#eef0ff] p-3">
+            <div className="flex items-start justify-between gap-3">
+              <div className="space-y-1">
+                <p className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#312e81]">
+                  <SparklesIcon className="h-4 w-4 text-[#4f46e5]" />
+                  AI-förslag
+                </p>
+                <p className="text-sm font-semibold text-ink-900">{visibleResultsSuggestion.title}</p>
+                <p className="text-sm text-ink-700">{visibleResultsSuggestion.detail}</p>
+              </div>
+              <button
+                type="button"
+                className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-[#4f46e5]/20 bg-white text-sm font-semibold text-[#312e81]"
+                aria-label="Stäng AI-förslag"
+                onClick={() => setDismissedResultsSuggestionKey(visibleResultsSuggestion.key)}
+              >
+                ×
+              </button>
+            </div>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <span className="rounded-full border border-[#4f46e5]/20 bg-white px-2.5 py-1 text-xs font-semibold text-[#312e81]">
+                Föreslagen ändring: {visibleResultsSuggestion.suggestedChange}
+              </span>
+              <span className="rounded-full border border-[#4f46e5]/20 bg-white px-2.5 py-1 text-xs font-semibold text-[#312e81]">
+                {visibleResultsSuggestion.count} träffar efter ändring
+              </span>
+            </div>
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                className="inline-flex h-[40px] items-center gap-1.5 rounded-xl bg-[#0f1930] px-3 text-xs font-semibold text-white"
+                onClick={() => void applyResultsSuggestion(visibleResultsSuggestion)}
+              >
+                <SparklesIcon className="h-3.5 w-3.5" />
+                Redigera med AI
+              </button>
+              <button
+                type="button"
+                className="inline-flex h-[40px] items-center rounded-xl border border-black/10 bg-white px-3 text-xs font-semibold text-ink-700"
+                onClick={() => openAiGuideStep(visibleResultsSuggestion.targetStep)}
+              >
+                Redigera manuellt
+              </button>
+            </div>
+          </div>
+        ) : null
+      ) : null}
     </div>
   ) : null;
 
@@ -1773,14 +2619,17 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
           <div className="grid grid-cols-2 gap-3">
             <label>
               <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-ink-700">Antal platser</span>
-              <input
-                value={filters.teamSize}
-                onChange={(event) => setFilters((prev) => ({ ...prev, teamSize: event.target.value }))}
-                className={heroInputClass}
-                placeholder="Platser"
-                type="number"
-                min="1"
-              />
+              <div className="flex h-[48px] items-center rounded-2xl border border-black/10 bg-transparent px-3">
+                <input
+                  value={filters.teamSize}
+                  onChange={(event) => setFilters((prev) => ({ ...prev, teamSize: event.target.value }))}
+                  className="min-w-0 flex-1 bg-transparent text-sm text-ink-900 placeholder:text-ink-500 focus:outline-none"
+                  placeholder="Platser"
+                  type="number"
+                  min="1"
+                />
+                <span className="ml-2 text-sm font-medium text-ink-700">st</span>
+              </div>
             </label>
             <label>
               <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-ink-700">Område</span>
@@ -1793,6 +2642,14 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
                 {districtOptions.map((district) => <option key={district} value={district} className="text-black">{district}</option>)}
               </select>
             </label>
+          </div>
+          <div className="max-w-[18rem]">
+            <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-ink-700">Möblering</span>
+            <FurnishingToggle
+              value={furnishedFilter}
+              onChange={setFurnishedFilter}
+              options={furnishedOptions}
+            />
           </div>
 
           {showAdvancedFiltersContent ? (
@@ -1928,15 +2785,6 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
                 </label>
               </div>
 
-              <div>
-                <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-ink-700">Möblering</span>
-                <FurnishingToggle
-                  value={furnishedFilter}
-                  onChange={setFurnishedFilter}
-                  options={furnishedOptions}
-                />
-              </div>
-
               <div className="rounded-2xl border border-black/10 bg-white p-3">
                 <p className="text-[11px] font-semibold uppercase tracking-wide text-ink-700">Särskilda krav</p>
                 <div className="mt-2 grid grid-cols-1 gap-2">
@@ -1981,7 +2829,7 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
                         key={option.value}
                         type="button"
                         className={`inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-semibold transition ${
-                          active ? "border-[#0f1930] bg-[#0f1930] text-white" : "border-black/15 bg-white text-ink-700 hover:bg-white"
+                          active ? "border-[#0f1930] bg-[#0f1930] text-white" : "border-black/10 bg-white text-ink-700 hover:bg-white"
                         }`}
                         onClick={() => toggleAmenity(option.value)}
                       >
@@ -1999,18 +2847,11 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
         <div className={`${useScrollableFilterPanel ? "sticky bottom-0 z-10 mt-1 shrink-0 border-t border-black/10 bg-white pt-3" : "mt-3"} flex flex-wrap items-center justify-end gap-2`}>
           <button
             type="button"
-            className="inline-flex h-[40px] items-center gap-1.5 rounded-xl border border-black/15 bg-white px-3 text-xs font-semibold text-ink-700 hover:bg-white"
+            className="inline-flex h-[40px] items-center gap-1.5 rounded-xl border border-black/10 bg-white px-3 text-xs font-semibold text-ink-700 hover:bg-white"
             onClick={() => setShowAdvancedSearchEditor((value) => !value)}
           >
             <span>{showAdvancedSearchEditor ? "Visa färre filter" : "Visa alla filter"}</span>
             <span aria-hidden="true" className="text-sm leading-none">{showAdvancedSearchEditor ? "−" : "+"}</span>
-          </button>
-          <button
-            type="submit"
-            className="inline-flex h-[40px] items-center gap-1.5 rounded-xl border border-[#0f1930] bg-[#0f1930] px-4 text-xs font-semibold text-white hover:bg-[#16233f]"
-          >
-            <SearchIcon className="h-4 w-4" />
-            Sök lokaler
           </button>
         </div>
       </form>
@@ -2025,7 +2866,7 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
           {visibleListings.length} träffar
         </div>
         <div className="flex items-center gap-2">
-          <div className="inline-flex items-center gap-1 rounded-xl border border-black/15 bg-white p-1">
+          <div className="inline-flex items-center gap-1 rounded-xl border border-black/10 bg-white p-1">
             <button
               type="button"
               className={`inline-flex min-h-[34px] items-center gap-1.5 rounded-lg px-3 text-xs font-semibold transition ${
@@ -2056,7 +2897,7 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
           <div className="inline-flex items-center gap-2">
             <label className="text-xs font-semibold text-ink-700">Sortera</label>
             <select
-              className="select-chevron min-h-[40px] min-w-[132px] rounded-xl border border-black/15 bg-white px-4 text-xs font-semibold text-ink-800 focus:border-[#0f1930] focus:outline-none"
+              className="select-chevron min-h-[40px] min-w-[132px] rounded-xl border border-black/10 bg-white px-4 text-xs font-semibold text-ink-800 focus:border-[#0f1930] focus:outline-none"
               value={sortBy}
               onChange={(event) => setSortBy(event.target.value)}
             >
@@ -2080,6 +2921,7 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
             shortlistedIds={favoriteIds}
             selectedListing={selectedMapListing}
             onCloseSelectedListing={() => setSelectedMapListing(null)}
+            showMatchChip={hasTeamSizeForMatchChip}
             dense
           />
           <p className="inline-flex items-center gap-1.5 text-xs text-ink-600"><MapIcon className="h-3.5 w-3.5" />Klicka på en markör för att visa objektkort direkt på kartan.</p>
@@ -2107,7 +2949,7 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
                   <button
                     key={suggestion.id}
                     type="button"
-                    className="group rounded-2xl border border-black/15 bg-white p-3 text-left transition hover:border-[#0f1930]/35 hover:bg-white"
+                    className="group rounded-2xl border border-black/10 bg-white p-3 text-left transition hover:border-[#0f1930]/35 hover:bg-white"
                     onClick={() => void applyNoMatchSuggestion(suggestion)}
                   >
                     <div className="flex items-start justify-between gap-2">
@@ -2148,7 +2990,7 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
               shortlisted={favoriteIds.has(listing.id)}
               onOpenListing={openListingDetail}
               onToggleShortlist={handleToggleShortlist}
-              showMatchChip
+              showMatchChip={hasTeamSizeForMatchChip}
             />
           ))}
         </div>
@@ -2228,8 +3070,9 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
                     onResetSearch={() => {
                       void handleResetSearchResults();
                     }}
-                    resultCount={visibleListings.length}
-                    defaultResultCount={sortedListings.length}
+                      resultCount={visibleListings.length}
+                      defaultResultCount={sortedListings.length}
+                      requestedStepRequest={aiGuideStepRequest}
                       onShowMatches={() => {
                         resultsTopRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
                       }}
@@ -2487,7 +3330,7 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
                                 {layoutTypeOptions.map((option) => <option key={option} value={option} className="text-black">{option}</option>)}
                               </select>
                             </label>
-                            <label className="inline-flex h-[48px] items-center gap-2 rounded-2xl border border-black/15 bg-white px-3 text-xs font-semibold text-ink-700">
+                            <label className="inline-flex h-[48px] items-center gap-2 rounded-2xl border border-black/10 bg-white px-3 text-xs font-semibold text-ink-700">
                               <input
                                 type="checkbox"
                                 className="search-flag-checkbox"
@@ -2496,7 +3339,7 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
                               />
                               Driftkostn. ingår
                             </label>
-                            <label className="inline-flex h-[48px] items-center gap-2 rounded-2xl border border-black/15 bg-white px-3 text-xs font-semibold text-ink-700">
+                            <label className="inline-flex h-[48px] items-center gap-2 rounded-2xl border border-black/10 bg-white px-3 text-xs font-semibold text-ink-700">
                               <input
                                 type="checkbox"
                                 className="search-flag-checkbox"
@@ -2505,7 +3348,7 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
                               />
                               Tillgänglighetsanp.
                             </label>
-                            <label className="inline-flex h-[48px] items-center gap-2 rounded-2xl border border-black/15 bg-white px-3 text-xs font-semibold text-ink-700">
+                            <label className="inline-flex h-[48px] items-center gap-2 rounded-2xl border border-black/10 bg-white px-3 text-xs font-semibold text-ink-700">
                               <input
                                 type="checkbox"
                                 className="search-flag-checkbox"
@@ -2527,7 +3370,7 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
                                     key={option.value}
                                     type="button"
                                     className={`inline-flex items-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-semibold transition ${
-                                      active ? "border-[#0f1930] bg-[#0f1930] text-white" : "border-black/15 bg-white text-ink-700 hover:bg-white"
+                                      active ? "border-[#0f1930] bg-[#0f1930] text-white" : "border-black/10 bg-white text-ink-700 hover:bg-white"
                                     }`}
                                     onClick={() => toggleAmenity(option.value)}
                                   >
@@ -2545,7 +3388,7 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
                         <div className="mt-5 flex items-center justify-between gap-2">
                           <button
                             type="button"
-                            className="inline-flex items-center gap-2 rounded-2xl border border-black/15 bg-white px-3 py-2 text-xs font-semibold text-ink-700 hover:bg-white"
+                            className="inline-flex items-center gap-2 rounded-2xl border border-black/10 bg-white px-3 py-2 text-xs font-semibold text-ink-700 hover:bg-white"
                             onClick={() => {
                               setShowAdvancedSearchEditor((value) => !value);
                             }}
@@ -2562,7 +3405,7 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
                         <div className="mt-5 flex items-center justify-end gap-2">
                           <button
                             type="button"
-                            className="rounded-2xl border border-black/15 bg-white px-4 py-3 text-sm font-semibold text-ink-700 hover:bg-white"
+                            className="rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm font-semibold text-ink-700 hover:bg-white"
                             onClick={closeSearchEditorSmooth}
                           >
                             Avbryt
@@ -2581,9 +3424,9 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
 
             <div className="space-y-4">
               {showInlineAiGuide ? (
-                <div className="grid gap-5 lg:grid-cols-[minmax(400px,460px)_minmax(0,1fr)] lg:items-start">
-                  <aside className="lg:sticky lg:top-4">
-                    <div className={isSwitchingSidePanel ? "search-editor-collapse-out" : "search-editor-expand-in"}>
+                <div className="grid gap-5 lg:h-[calc(100vh-12.5rem)] lg:grid-cols-[minmax(400px,460px)_minmax(0,1fr)] lg:items-start lg:overflow-hidden">
+                  <aside className="lg:h-full lg:min-h-0 lg:overflow-y-auto lg:overscroll-contain lg:pr-1">
+                    <div className={`${isSwitchingSidePanel ? "search-editor-collapse-out" : "search-editor-expand-in"} lg:min-h-full`}>
                       {sidePanelMode === "ai" ? (
                         <AiGuidedAssistant
                           key={`inline-ai-${aiGuideResetKey}`}
@@ -2606,12 +3449,12 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
                           }}
                           resultCount={visibleListings.length}
                           defaultResultCount={sortedListings.length}
+                          requestedStepRequest={aiGuideStepRequest}
                         onShowMatches={() => {
                           resultsTopRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
                         }}
                         submitLabel="Uppdatera sökning"
                         showHeader={false}
-                        suggestionChipLabel={displayedAiSuggestionLabel}
                         showModeSwitch
                         filterModeActive={!showEditorAiPanel}
                         onToggleFilterMode={handleFilterSearchToggle}
@@ -2622,7 +3465,7 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
                     </div>
                   </aside>
 
-                  <div className="space-y-4">
+                  <div className="space-y-4 pb-8 lg:h-full lg:min-h-0 lg:overflow-y-auto lg:overscroll-contain lg:pr-1 lg:pb-16">
                     {preferencesSummaryCard}
                     {resultsContent}
                   </div>
@@ -2654,7 +3497,7 @@ function RentPage({ app, isGuest = false, onRequireAuth }) {
           <div className="relative w-full max-w-lg rounded-2xl border border-black/10 bg-white p-5 shadow-[0_24px_64px_rgba(15,25,48,0.28)]" onClick={(event) => event.stopPropagation()}>
             <button
               type="button"
-              className="absolute right-3 top-3 inline-flex h-9 w-9 min-h-9 min-w-9 aspect-square items-center justify-center rounded-full border border-black/15 p-0 text-lg font-semibold leading-none text-ink-700 hover:bg-white"
+              className="absolute right-3 top-3 inline-flex h-9 w-9 min-h-9 min-w-9 aspect-square items-center justify-center rounded-full border border-black/10 p-0 text-lg font-semibold leading-none text-ink-700 hover:bg-white"
               onClick={() => setShowEditorAiInfo(false)}
               aria-label="Stäng"
             >

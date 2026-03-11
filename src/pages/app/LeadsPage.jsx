@@ -7,7 +7,7 @@ function viewingStatusClass(status) {
   if (status === "Ny") return "border-amber-200 bg-amber-50 text-amber-800";
   if (status === "Kontaktad") return "border-blue-200 bg-blue-50 text-blue-800";
   if (status === "Visning bokad") return "border-emerald-200 bg-emerald-50 text-emerald-800";
-  return "border-black/15 bg-[#f7f7f7] text-ink-700";
+  return "border-black/10 bg-[#f7f7f7] text-ink-700";
 }
 
 function viewingStatusDetail(status) {
@@ -95,7 +95,7 @@ function LeadsPage({ app }) {
             <section className="rounded-3xl border border-black/10 bg-white p-4">
               <div className="mb-3 flex items-center justify-between gap-2">
                 <h2 className="text-xl font-semibold">Intresseanmälningar</h2>
-                <span className="rounded-full border border-black/15 bg-[#f7f7f7] px-2 py-1 text-xs font-semibold">{leads.length}</span>
+                <span className="rounded-full border border-black/10 bg-[#f7f7f7] px-2 py-1 text-xs font-semibold">{leads.length}</span>
               </div>
               <div className="space-y-2">
                 {leads.length === 0 ? <p className="rounded-2xl border border-black/10 bg-[#fafafa] p-3 text-sm text-ink-500">Inga intresseanmälningar ännu.</p> : null}
@@ -124,7 +124,7 @@ function LeadsPage({ app }) {
           <section className="rounded-3xl border border-black/10 bg-white p-4">
             <div className="mb-3 flex items-center justify-between gap-2">
               <h2 className="text-xl font-semibold">Visningar</h2>
-              <span className="rounded-full border border-black/15 bg-[#f7f7f7] px-2 py-1 text-xs font-semibold">{viewingItems.length}</span>
+              <span className="rounded-full border border-black/10 bg-[#f7f7f7] px-2 py-1 text-xs font-semibold">{viewingItems.length}</span>
             </div>
             <div className="space-y-2">
               {viewingItems.length === 0 ? <p className="rounded-2xl border border-black/10 bg-[#fafafa] p-3 text-sm text-ink-500">Du har inga visningsförfrågningar ännu.</p> : null}

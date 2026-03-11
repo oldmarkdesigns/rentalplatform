@@ -227,8 +227,8 @@ const parkingTypeOptions = ["Alla", "Ingen parkering", "Garage", "Gatuparkering"
 const layoutTypeOptions = ["Alla", "Öppet landskap", "Cellkontor", "Hybrid", "Showroom"];
 const advertiserOptions = ["Alla", "AMF Fastigheter", "Vasakronan", "Castellum", "Fabege", "Skandia Fastigheter"];
 
-const heroInputClass = "w-full rounded-2xl border border-black/15 bg-transparent px-3 py-3 text-sm text-ink-900 placeholder:text-ink-500 focus:border-[#0f1930] focus:outline-none";
-const heroSelectClass = "select-chevron w-full rounded-2xl border border-black/15 bg-transparent px-3 py-3 pr-10 text-sm text-ink-900 focus:border-[#0f1930] focus:outline-none";
+const heroInputClass = "w-full rounded-2xl border border-black/10 bg-transparent px-3 py-3 text-sm text-ink-900 placeholder:text-ink-500 focus:border-[#0f1930] focus:outline-none";
+const heroSelectClass = "select-chevron w-full rounded-2xl border border-black/10 bg-transparent px-3 py-3 pr-10 text-sm text-ink-900 focus:border-[#0f1930] focus:outline-none";
 
 function HeroPillToggle({ checked, onToggle, ariaLabel }) {
   return (
@@ -489,7 +489,7 @@ function LandingPage({ user, onOpenAuthOverlay, onLogout, listings = [] }) {
       >
         <div className="grid w-full grid-cols-[1fr_auto_1fr] items-center gap-4 px-4 py-3 sm:px-6">
           <button type="button" className="justify-self-start text-left" onClick={handleHomeBrandClick}>
-            <span className="inline-flex items-center gap-2 rounded-xl border border-black/15 bg-white px-2.5 py-1.5">
+            <span className="inline-flex items-center gap-2 rounded-xl border border-black/10 bg-white px-2.5 py-1.5">
               <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-dashed border-black/30 bg-white text-[9px] font-semibold uppercase tracking-wide text-ink-500">
                 LOGGA
               </span>
@@ -528,7 +528,7 @@ function LandingPage({ user, onOpenAuthOverlay, onLogout, listings = [] }) {
                     <div className="mt-2 grid gap-2 text-sm">
                       <button
                         type="button"
-                        className="rounded-xl border border-black/15 bg-white px-3 py-2 text-left font-semibold text-ink-700"
+                        className="rounded-xl border border-black/10 bg-white px-3 py-2 text-left font-semibold text-ink-700"
                         onClick={() => {
                           setMenuOpen(false);
                           navigateTo("/app/profile");
@@ -542,7 +542,7 @@ function LandingPage({ user, onOpenAuthOverlay, onLogout, listings = [] }) {
                       {roleSet.has("publisher") ? (
                         <button
                           type="button"
-                          className="rounded-xl border border-black/15 bg-white px-3 py-2 text-left font-semibold text-ink-700"
+                          className="rounded-xl border border-black/10 bg-white px-3 py-2 text-left font-semibold text-ink-700"
                           onClick={() => {
                             setMenuOpen(false);
                             navigateTo("/app/my-listings");
@@ -556,7 +556,7 @@ function LandingPage({ user, onOpenAuthOverlay, onLogout, listings = [] }) {
                       ) : null}
                       <button
                         type="button"
-                        className="rounded-xl border border-black/15 bg-white px-3 py-2 text-left font-semibold text-ink-700"
+                        className="rounded-xl border border-black/10 bg-white px-3 py-2 text-left font-semibold text-ink-700"
                         onClick={async () => {
                           setMenuOpen(false);
                           await onLogout?.();
@@ -576,7 +576,7 @@ function LandingPage({ user, onOpenAuthOverlay, onLogout, listings = [] }) {
               <>
                 <button
                   type="button"
-                  className="rounded-xl border border-black/15 bg-white px-3 py-2 text-xs font-semibold text-ink-700 hover:bg-white"
+                  className="rounded-xl border border-black/10 bg-white px-3 py-2 text-xs font-semibold text-ink-700 hover:bg-white"
                   onClick={() => navigateTo("/app/rent")}
                 >
                   Logga in
@@ -988,7 +988,7 @@ function LandingPage({ user, onOpenAuthOverlay, onLogout, listings = [] }) {
         <div className="mx-auto w-full max-w-[86rem] px-4 py-10 sm:px-6">
           <div className="grid gap-8 lg:grid-cols-[1.15fr_0.95fr_0.95fr_0.95fr]">
             <div className="space-y-4">
-              <div className="inline-flex items-center gap-3 rounded-2xl border border-black/15 bg-white px-4 py-3">
+              <div className="inline-flex items-center gap-3 rounded-2xl border border-black/10 bg-white px-4 py-3">
                 <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-dashed border-black/30 bg-white text-[10px] font-semibold uppercase tracking-wide text-ink-500">
                   LOGGA
                 </span>

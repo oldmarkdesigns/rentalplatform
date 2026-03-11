@@ -4,7 +4,7 @@ function FurnishingToggle({ options, value, onChange, className = "" }) {
   const segmentWidth = safeOptions.length > 0 ? 100 / safeOptions.length : 100;
 
   return (
-    <div className={`inline-flex h-[48px] w-full items-center rounded-2xl border border-black/15 bg-white p-1 ${className}`}>
+    <div className={`inline-flex h-[48px] w-full items-center rounded-2xl border border-black/10 bg-white p-1 ${className}`}>
       <div className="relative h-full w-full">
         <span
           aria-hidden="true"

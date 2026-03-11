@@ -86,7 +86,7 @@ function AuthOverlay({ open, mode = "login", preferredRole = "renter", onClose, 
             <h2 className="text-2xl font-semibold">Fortsätt med inloggning</h2>
             <p className="text-sm text-ink-600">Logga in eller skapa konto för att spara, boka visning och publicera.</p>
           </div>
-          <button type="button" className="rounded-xl border border-black/15 bg-white px-3 py-1.5 text-xs font-semibold text-ink-700" onClick={onClose}>
+          <button type="button" className="rounded-xl border border-black/10 bg-white px-3 py-1.5 text-xs font-semibold text-ink-700" onClick={onClose}>
             Stäng
           </button>
         </div>
@@ -97,7 +97,7 @@ function AuthOverlay({ open, mode = "login", preferredRole = "renter", onClose, 
           <span className="h-px flex-1 bg-black/10" />
         </div>
 
-        <div className="mb-3 inline-flex rounded-2xl border border-black/15 bg-white p-1 text-xs">
+        <div className="mb-3 inline-flex rounded-2xl border border-black/10 bg-white p-1 text-xs">
           <button type="button" onClick={() => setActiveForm("login")} className={`rounded-xl px-3 py-2 font-semibold ${activeForm === "login" ? "bg-[#0f1930] text-white" : "text-ink-600"}`}>
             Logga in
           </button>
